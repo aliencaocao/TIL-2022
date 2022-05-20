@@ -1,4 +1,9 @@
 Audio/data/combined
 Audio/data/CREMA-D
 Audio/data/RAVDESS
+Audio/data/EmoDB
+Audio/data/SAVEE
+Audio/data/TESS
 /.idea
+*.zip
+*.pt
