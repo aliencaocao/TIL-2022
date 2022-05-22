@@ -1,0 +1,5 @@
+effecient net v2s no db norm, 9k files (removed bad files), 20 epoch: 7232
+effecient net v2s with db norm, 9531 files (after fixed bad files using norm), 20 epoch: 7331
+all exp below uses 9531 files
+densenet121 with densenet preprocessing layer, 20 epoch: 2071
+densenet121 NO densenet preprocessing layer, 20 epoch: 6917

@@ -4,6 +4,8 @@ Audio/data/RAVDESS
 Audio/data/EmoDB
 Audio/data/SAVEE
 Audio/data/TESS
+Audio/data/bad_files
+Audio/data/combined_normalized
 /.idea
 *.zip
 *.pt
