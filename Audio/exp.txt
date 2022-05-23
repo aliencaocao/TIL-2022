@@ -3,3 +3,8 @@ effecient net v2s with db norm, 9531 files (after fixed bad files using norm), 2
 all exp below uses 9531 files
 densenet121 with densenet preprocessing layer, 20 epoch: 2071
 densenet121 NO densenet preprocessing layer, 20 epoch: 6917
+effecient net v2s with no aug, crashed at 11 epoch but reducelronplaetu set to 3 (prev was 4): 7593-> improvement might be caused by callback change
+effecient net v2s with no aug, 20 epoch with consine decay (20 * 477 steps), no reducelr (cannot use tger): 7577, overfits hard to 0.9977 on train
+effecient net v2s with aug, 20 epoch with consine decay (20 * 477 steps), no reducelr (cannot use tger): 7420, overfits hard to 0.9929 on train
+---seems like LR scheduler lead to more overfit on train but val doesnt hurt a lot
+effecient net v2s with aug, 20 epoch with reducelr=3, no schedule: 7441, seems no aug improves a bit
