@@ -6,6 +6,8 @@ Audio/data/SAVEE
 Audio/data/TESS
 Audio/data/bad_files
 Audio/data/combined_normalized
+Audio/data/test
+Audio/models
 /.idea
 *.zip
 *.pt
