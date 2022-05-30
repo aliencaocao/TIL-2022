@@ -35,3 +35,5 @@ RegNet X 032 no aug, dense256, dropout 0.3, 14 epoch early stopped, lr=5e-4: 768
 RegNet X 032 no aug, dense256, dropout 0.3, 14 epoch early stopped, lr=5e-4: 7682
 RegNet X 032 no aug, dense256, dropout 0.3, 25 epoch, lr=1e-3: 7813 (5e-4 abt 76)
 RegNet X 032 no aug, dense256, dropout 0.3, 25 epoch, lr=1e-3, melbin fmin=50, fmax=8000: 7556
+RegNet X 016 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1: best acc 7803 but best F1 is 7735 which correspond to acc 7738
+Same as above but with aug: 2*time mask=10, 2*freq mask=10, TTA: ~71 f1, bad
