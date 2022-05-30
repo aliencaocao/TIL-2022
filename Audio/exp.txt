@@ -37,3 +37,20 @@ RegNet X 032 no aug, dense256, dropout 0.3, 25 epoch, lr=1e-3: 7813 (5e-4 abt 76
 RegNet X 032 no aug, dense256, dropout 0.3, 25 epoch, lr=1e-3, melbin fmin=50, fmax=8000: 7556
 RegNet X 016 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1: best acc 7803 but best F1 is 7735 which correspond to acc 7738
 Same as above but with aug: 2*time mask=10, 2*freq mask=10, TTA: ~71 f1, bad
+RegNet X 016 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8529, acc: 8512
+RegNet X 016 no aug, 1x dense 256, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 5957, acc: 7900
+RegNet X 016 no aug, 2x dense 128, dropout 0.4, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8386, acc: 8543
+RegNet X 016 with aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8000, acc: 8029
+
+ALl combined data below means combined + TIL train
+RegNet X 016 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1, combined data: f1: 7905, acc: 7979
+RegNet X 008 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 7956, acc:8343
+RegNet X 032 no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8544, acc: 8700
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8854(extended to 31 epoch as still increasing) -> global avg pooling GOOD!
+RegNet X 064 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 25 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8755, acc: 8900 (extended to 34 epoch)
+
+all combined below add NCSE dataset
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 28 epoch early stopped, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1, combined: f1:7663
+
+F1 below change from macro avg to weighted avg
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8701

@@ -7,3 +7,5 @@ http://www.emodb.bilderbar.info/download/
 http://kahlan.eps.surrey.ac.uk/savee/
 
 https://dataverse.scholarsportal.info/dataset.xhtml?persistentId=doi%3A10.5683%2FSP2%2FE8H2MF
+
+[1] Russ, J. B., Gur, R. C., & Bilker, W. B. (2008). Validation of affective and neutral sentence content for prosodic testing. Behavior Research Methods, 40(4), 935–939. http://doi.org/10.3758/BRM.40.4.935
