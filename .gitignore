@@ -11,6 +11,7 @@ Audio/data/bad_files
 Audio/data/combined_normalized
 Audio/data/TIL*
 Audio/models
+Audio/submissions
 CV/data/
 /.idea
 *.zip
