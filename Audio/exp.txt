@@ -53,4 +53,9 @@ all combined below add NCSE dataset
 RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 28 epoch early stopped, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1, combined: f1:7663
 
 F1 below change from macro avg to weighted avg
-RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8701
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 8701 (BEST REAL SO FAR)
+
+F1 below use TIL test ans as val, test ans score on leaderboard: 8647
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 trained on TIL train ONLY: f1: 5162
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=1e-3 with ranger, callbacks using F1 score, label smoothing=0.1 combined: f1: 5295
+RegNet X 032 + global avg pool 2d no aug, 2x dense 128, dropout 0.3, 40 epoch, lr=7e-4 with ranger, callbacks using F1 score, label smoothing=0.1 combined: f1: 5730
