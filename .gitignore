@@ -1,3 +1,4 @@
+# Audio
 Audio/data/combined
 Audio/data/CREMA-D
 Audio/data/RAVDESS
@@ -12,7 +13,17 @@ Audio/data/combined_normalized
 Audio/data/TIL*
 Audio/models
 Audio/submissions
+
+# CV
 CV/data/
+CV/scripts/generate-preds/pred-imgs
+CV/scripts/generate-preds/labels
+CV/scripts/val-split/images
+CV/scripts/val-split/labels
+CV/scripts/val-split/val_images
+CV/scripts/val-split/val_labels
+
+# Other
 /.idea
 *.zip
 *.pt
