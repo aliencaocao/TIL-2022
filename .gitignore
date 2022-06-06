@@ -1,18 +1,12 @@
 # Audio
-Audio/data/combined
-Audio/data/CREMA-D
-Audio/data/RAVDESS
-Audio/data/EmoDB
-Audio/data/SAVEE
-Audio/data/TESS
-Audio/data/Neutral Content Said Emotionally database
-Audio/data/NCSE_sorted
-Audio/data/NCSE_sorted_normalized
-Audio/data/bad_files
-Audio/data/combined_normalized
-Audio/data/TIL*
+Audio/data
+!Audio/data/citations.txt
+!Audio/data/split.ipynb
 Audio/models
-Audio/submissions
+Audio/xlsr*
+Audio/answer*.csv
+Audio/answer*.xlsx
+*.onnx
 
 # CV
 CV/data/
@@ -22,6 +16,8 @@ CV/scripts/val-split/images
 CV/scripts/val-split/labels
 CV/scripts/val-split/val_images
 CV/scripts/val-split/val_labels
+CV/to_wbf
+CV/yolov5
 
 # Other
 /.idea
