@@ -1,8 +1,8 @@
 import json
 
-with open("easter_egg_day_1.json") as egg_json_file:
+with open("easter_egg_day_2.json") as egg_json_file:
   egg_data = json.load(egg_json_file)
-with open("training_data.json") as train_json_file:
+with open("train_egg1_merged.json") as train_json_file:
   train_data = json.load(train_json_file)
 
 merged_data = train_data
@@ -28,5 +28,5 @@ for annotation in egg_data["annotations"]:
   merged_data["annotations"].append(new_annotation)
   curr_annotation_id += 1
 
-with open("train_egg_merged.json", "w") as merged_json_file:
-  json.dump(merged_data, merged_json_file)
+with open("train_egg2_merged.json", "w") as merged_json_file:
+  json.dump(merged_data, merged_json_file, separators=(",", ":"))

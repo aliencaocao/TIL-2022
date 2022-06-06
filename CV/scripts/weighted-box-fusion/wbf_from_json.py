@@ -73,5 +73,5 @@ for img_id in img_has_pred:
       "score": 0.01,
     })
 
-with open(f"wbf_({', '.join(all_models_preds)}).json", "w") as wbf_preds_file:
+with open(f"wbf_all_preds_ever.json", "w") as wbf_preds_file:
   json.dump(wbf_all_preds, wbf_preds_file, separators=(",", ":"))
