@@ -10,4 +10,10 @@ https://dataverse.scholarsportal.info/dataset.xhtml?persistentId=doi%3A10.5683%2
 
 [1] Russ, J. B., Gur, R. C., & Bilker, W. B. (2008). Validation of affective and neutral sentence content for prosodic testing. Behavior Research Methods, 40(4), 935–939. http://doi.org/10.3758/BRM.40.4.935
 
-Ooi Xuan Shan & Huang Qirui, member of team 8000SGD_CAT, Hwa Chong Institution
+Ooi Xuan Shan & Huang Qirui, member of team 8000SGD_CAT, Hwa Chong Institution - contributed 100 samples of self-recorded Singaporean accent samples
+
+http://m3c.web.auth.gr/research/aesdd-speech-emotion-recognition/
+
+Cross Lingual Speech Emotion Recognition: Urdu vs. Western Languages (https://github.com/siddiquelatif/URDU-Dataset)
+
+Giovanni Costantini, Iacopo Iaderola, Andrea Paoloni, and Massimiliano Todisco. 2014. EMOVO Corpus: an Italian Emotional Speech Database. In Proceedings of the Ninth International Conference on Language Resources and Evaluation (LREC'14), pages 3501–3504, Reykjavik, Iceland. European Language Resources Association (ELRA).
