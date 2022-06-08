@@ -38,7 +38,7 @@ for preds_file_path in Path('to_wbf').glob("*.json"):
 
 wbf_all_preds = []
 img_has_pred = {}
-img_info = json.loads(open("data/test/interim_no_annotations.json").read())["images"]
+img_info = json.loads(open("data/finals/qualifiers_finals_no_annotations.json").read())["images"]
 for img in img_info:
     boxes_list = []
     scores_list = []
