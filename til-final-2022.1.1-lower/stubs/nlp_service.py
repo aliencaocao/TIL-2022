@@ -1,10 +1,11 @@
 from typing import Iterable, List
 from tilsdk.localization.types import *
 import onnxruntime as ort
+import io
+import time
 import librosa
 import numpy as np
 import sys
-import io
 sys.path.append('../Audio/')  # for local import, in real finals put the transformers folder in working dir and remove this
 from transformers import Wav2Vec2FeatureExtractor  # local import
 
@@ -26,7 +27,13 @@ class NLPService:
         print('Loading model...')
         self.model = ort.InferenceSession(model_dir, sess_options=sess_options, providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider'])  # try tensorrt provider first
         self.id2label = {0: True, 1: False}  # 0: "angry_sad", 1: "happy_neutral", useful or not
-        print('NLP service initialized.')
+        print('NLP service initialized. Warming up...')
+        with open('sample.wav', 'rb') as f:
+            data = f.read()
+        start = time.time()
+        for i in range(10):
+            self.predict(data)
+        print(f'Warm up done. Average inference time: {(time.time() - start)/10}s')
 
     def predict(self, wav: bytes) -> bool:
         try:
