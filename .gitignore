@@ -18,6 +18,7 @@ CV/scripts/val-split/val_images
 CV/scripts/val-split/val_labels
 CV/to_wbf
 CV/yolov5
+CV/rcnn
 
 # Other
 /.idea
