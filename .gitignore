@@ -6,6 +6,7 @@ Audio/models
 Audio/xlsr*
 Audio/answer*.csv
 Audio/answer*.xlsx
+Audio/transformers
 
 # CV
 CV/data/
