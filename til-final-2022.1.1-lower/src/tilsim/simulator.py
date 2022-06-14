@@ -15,6 +15,7 @@ import numpy as np
 from numpy.random import default_rng
 from matplotlib.colors import to_rgba
 from werkzeug.serving import WSGIRequestHandler
+from waitress import serve
 
 from tilsdk.localization import *
 
@@ -119,7 +120,7 @@ def get_camera():
 
 def start_server():
     global config
-    app.run(host=config.host, port=config.port)
+    serve(app, host=config.host, port=config.port, expose_tracebacks=True, threads=8)
 
 ##### Robot classes #####
 
