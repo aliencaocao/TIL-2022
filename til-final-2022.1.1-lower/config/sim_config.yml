@@ -4,15 +4,15 @@ host: '0.0.0.0'
 port: 5566
 
 # map
-map_file: './data/maps/map_complex_1cm.png'
-map_scale: 0.01
+map_file: './data/maps/test_5cm.png'
+map_scale: 0.05
 
 # display
-robot_radius: 10
+robot_radius: 2 #For scale 0.05. 10 for scale 0.01
 
 # simulation
 start_pose:
-  x: 1.0
+  x: 0.5
   y: 1.0
   z: 0.0
 use_noisy_pose: true
@@ -33,11 +33,21 @@ clues:
     trigger:
       x: 1.0
       y: 1.0
-      r: 0.5
+      r: 0.7
     location:
       x: 4.0
-      y: 3.0
+      y: 4.0
     audio_file: './data/audio/SM4_F48_A0100.wav'
+  - clue_id: 2
+    trigger:
+      x: 3.0
+      y: 1.5
+      r: 0.8
+    location:
+      x: 1.0
+      y: 2.5
+    audio_file: './data/audio/SM4_F48_A0100.wav'
+
 
 # targets
 targets:
