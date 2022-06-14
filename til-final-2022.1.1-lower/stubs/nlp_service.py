@@ -5,8 +5,6 @@ import io
 import time
 import librosa
 import numpy as np
-import sys
-sys.path.append('../Audio/')  # for local import, in real finals put the transformers folder in working dir and remove this
 from transformers import Wav2Vec2FeatureExtractor  # local import
 
 
@@ -25,13 +23,13 @@ class NLPService:
         print('Loading preprocessor...')
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(preprocessor_dir)
         print('Loading model...')
-        self.model = ort.InferenceSession(model_dir, sess_options=sess_options, providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider'])  # try tensorrt provider first
+        self.model = ort.InferenceSession(model_dir, sess_options=sess_options, providers=['CUDAExecutionProvider'])
         self.id2label = {0: True, 1: False}  # 0: "angry_sad", 1: "happy_neutral", useful or not
         print('NLP service initialized. Warming up...')
         with open('sample.wav', 'rb') as f:
             data = f.read()
         start = time.time()
-        for i in range(10):
+        for i in range(5):
             self.predict(data)
         print(f'Warm up done. Average inference time: {(time.time() - start)/10}s')
 
