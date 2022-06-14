@@ -46,7 +46,7 @@ class NLPService:
             print(f'Error while predicting: {e}')
             return False
 
-    def locations_from_clues(self, clues: Iterable[Clue]) -> Lists[RealLocation]:
+    def locations_from_clues(self, clues: Iterable[Clue]):
         '''Process clues and get locations of interest.
         
         Parameters
@@ -70,8 +70,26 @@ class NLPService:
         return useful_locs, maybe_useful_locs
 
 
-class MockNLPService(NLPService):
+class MockNLPService:
     '''Mock NLP Service.
     
     This is provided for testing purposes and should be replaced by your actual service implementation.
     '''
+
+    def __init__(self, model_dir:str):
+        '''
+        Parameters
+        ----------
+        model_dir : str
+            Path of model file to load.
+        '''
+        pass
+
+    def locations_from_clues(self, clues:Iterable[Clue]) -> List[RealLocation]:
+        '''Process clues and get locations of interest.
+        
+        Mock returns location of all clues.
+        '''
+        locations = [c.location for c in clues]
+
+        return locations
