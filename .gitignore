@@ -26,3 +26,4 @@ CV/rcnn
 *.pt
 *.onnx
 /til-final
+*.whl

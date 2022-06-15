@@ -1,8 +1,8 @@
 from typing import List, Any
 from tilsdk.cv.types import *
 from tilsdk.cv import DetectedObject
-import onnxruntime as ort
 from mmdet.apis import init_detector, inference_detector
+
 
 class CVService:
     def __init__(self, config_file, checkpoint_file):
@@ -30,10 +30,10 @@ class CVService:
         results  : List[DetectedObject]
             Detected targets.
         '''
-        
+
         result = inference_detector(self.model, img)
         detections = []
-        
+
         current_detection_id = 1
         for class_id, this_class_detections in enumerate(result):
             for detection in this_class_detections:
@@ -59,7 +59,7 @@ class MockCVService:
     This is provided for testing purposes and should be replaced by your actual service implementation.
     '''
 
-    def __init__(self, model_dir:str):
+    def __init__(self, model_dir: str):
         '''
         Parameters
         ----------
@@ -69,7 +69,7 @@ class MockCVService:
         # Does nothing.
         pass
 
-    def targets_from_image(self, img:Any) -> List[DetectedObject]:
+    def targets_from_image(self, img: Any) -> List[DetectedObject]:
         '''Process image and return targets.
         
         Parameters
@@ -83,6 +83,6 @@ class MockCVService:
             Detected targets.
         '''
         # dummy data
-        bbox = BoundingBox(100,100,300,50)
+        bbox = BoundingBox(100, 100, 300, 50)
         obj = DetectedObject("1", "1", bbox)
         return [obj]
