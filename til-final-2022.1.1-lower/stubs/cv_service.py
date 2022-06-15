@@ -1,6 +1,6 @@
 from typing import List, Any
 from tilsdk.cv.types import *
-from tilsdk.cv import DetectedObject
+from tilsdk.cv import DetectedObject, BoundingBox
 from mmdet.apis import init_detector, inference_detector
 
 
@@ -41,12 +41,7 @@ class CVService:
                 detections.append(DetectedObject(
                     id=current_detection_id,
                     cls="fallen" if class_id == 0 else "standing",
-                    bbox={
-                        "x": x1,
-                        "y": y1,
-                        "w": x2 - x1,
-                        "h": y2 - y1,
-                    }
+                    bbox=BoundingBox(x=x1, y=y1, w=x2-x1, h=y2-y1),
                 ))
                 current_detection_id += 1
 
