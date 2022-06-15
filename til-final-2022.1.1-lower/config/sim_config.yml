@@ -13,7 +13,7 @@ robot_radius: 2 #For scale 0.05. 10 for scale 0.01
 # simulation
 start_pose:
   x: 0.5
-  y: 1.0
+  y: 4.0
   z: 0.0
 use_noisy_pose: true
 robot_phy_length: 0.32
