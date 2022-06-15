@@ -43,6 +43,7 @@ class CVService:
                     cls="fallen" if class_id == 0 else "standing",
                     bbox=BoundingBox(x=x1, y=y1, w=x2-x1, h=y2-y1),
                 ))
+                print(f'Detected {"fallen" if class_id == 0 else "standing"}, conf {_confidence}')
                 current_detection_id += 1
 
         return detections

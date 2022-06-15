@@ -1,12 +1,10 @@
-from typing import List, Tuple, TypeVar, Dict
+from typing import List, Tuple, Dict
 import numpy as np
 from tilsdk.localization import *
 
-T = TypeVar('T')
-
 
 class MyPlanner:
-    def __init__(self, map_: SignedDistanceGrid = None, waypoint_sparsity=0.5, optimize_threshold=3, consider=4):
+    def __init__(self, map_: SignedDistanceGrid = None, waypoint_sparsity=0.5, optimize_threshold=3, consider=4, biggrid_size=0.5):
         '''
         Parameters
         ----------
@@ -18,18 +16,43 @@ class MyPlanner:
             0.5 results in every 50th waypoint being taken at scale=0.01 and 10th at scale=0.05
         consider: float
             For the get_explore function only. See there for more details.
+        biggrid_size:
+            Divide the grid into squares of side length biggrid_size m.
+            When there are no clues, the planner will try to explore every square of this big grid.
         '''
+        # ALL grids (including big_grid use [y][x] convention)
         self.optimize_threshold = optimize_threshold
         self.map = map_
         self.bgrid = self.transform_add_border(map_.grid.copy())  # Grid which takes the borders into account
         self.astar_grid = self.transform_for_astar(self.bgrid.copy())
         self.waypoint_sparsity = waypoint_sparsity
-        self.big_grid = [[0 for j in range(14)] for i in range(10)]  # Big_grid stores whether each 0.5*0.5m tile of the arena has been visited
-        self.big_grid_centre = [[0 for j in range(14)] for i in range(10)]
+        self.biggrid_size = biggrid_size
+        self.bg_idim = math.ceil(5 / biggrid_size)  # i:y
+        self.bg_jdim = math.ceil(7 / biggrid_size)  # j:x
+        self.big_grid = [[0 for j in range(self.bg_jdim)] for i in range(self.bg_idim)]  # Big_grid stores whether each 0.5*0.5m tile of the arena has been visited
+        self.big_grid_centre = [[0 for j in range(self.bg_jdim)] for i in range(self.bg_idim)]
         self.consider = consider
-        for i in range(10):
-            for j in range(14):
-                self.big_grid_centre[i][j] = RealLocation(j + 0.25, i + 0.25)
+        self.passable = self.map.grid > 0
+
+        for i in range(self.bg_idim):
+            for j in range(self.bg_jdim):
+                # Find the closest free location to centre of this cell
+                y_pos = min(4.9, i * self.biggrid_size + self.biggrid_size / 2)
+                x_pos = min(6.9, j * self.biggrid_size + self.biggrid_size / 2)
+
+                grid_loc = self.map.real_to_grid(RealLocation(x_pos, y_pos))
+                grid_loc = grid_loc[1], grid_loc[0]
+                nc = self.nearest_clear(grid_loc, self.passable)
+                # If the closest free location to the entre of the cell is in another cell,
+                # ignore this cell by marking it as visited
+                # This doesn't happen though
+                nc = nc[1], nc[0]
+                nc = self.map.grid_to_real(nc)
+                # print("gridctr",RealLocation(x_pos,y_pos),"nc",nc)
+                if self.big_grid_of(nc) != (j, i):
+                    self.big_grid[i][j] = 1
+                else:
+                    self.big_grid_centre[i][j] = nc
 
     def transform_add_border(self, og_grid):
         grid = og_grid.copy()
@@ -40,56 +63,56 @@ class MyPlanner:
         return grid
 
     def transform_for_astar(self, grid):
-        # !-- Possible to edit this transform if u want
+        # Possible to edit this transform if u want
+        k = 100  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
         grid2 = grid.copy()
-        grid2[grid2 > 0] = 1 + 100 / (grid2[grid2 > 0])
+        grid2[grid2 > 0] = 1 + k / (grid2[grid2 > 0])
         grid2[grid2 <= 0] = np.inf
         return grid2.astype("float32")
 
-    @staticmethod
-    def big_grid_of(l: RealLocation):  # Returns the big grid array indices of a real location
-        return int(l[0] // 0.5), int(l[1] // 0.5)
+    def big_grid_of(self, l: RealLocation):  # Returns the big grid array indices of a real location
+        return int(l[0] // self.biggrid_size), int(l[1] // self.biggrid_size)
 
     def visit(self, l: RealLocation):
         indices = self.big_grid_of(l)
-        self.big_grid[indices[0]][indices[1]] = max(1, self.big_grid[indices[0]][indices[1]])
+        self.big_grid[indices[1]][indices[0]] = max(1, self.big_grid[indices[1]][indices[0]])
 
     def get_explore(self, l: RealLocation, debug: bool = False):  # Call this to get a location to go to if there are no locations of interest left
         # debug: Whether to plot maps and show info
-        # consider (in __init__): Consider the astar paths of this number of closest unvisited cells by euclidean distance
+        # consider (in __init__): Consider the astar paths of this number of the closest unvisited cells by euclidean distance
         # Larger number gives better performance but slower
         m = 100
-        for i in range(10):
-            for j in range(14):
+        for i in range(self.bg_idim):
+            for j in range(self.bg_jdim):
                 m = min(m, self.big_grid[i][j])
         if m == 1:  # Can comment out this part if u want the robot to vroom around infinitely
             return None
 
-        closeness = []
-        for i in range(10):
-            for j in range(14):
+        distance = []
+        for i in range(self.bg_idim):
+            for j in range(self.bg_jdim):
                 if self.big_grid[i][j] == m:
-                    closeness.append((self.heuristic(self.big_grid_centre[i][j], l), (i, j)))
-        closeness.sort()
+                    distance.append((self.heuristic(self.big_grid_centre[i][j], l), (i, j)))
+        distance.sort()
 
-        if len(closeness) == 0:
+        if len(distance) == 0:
             return None
 
-        closeness = closeness[:min(self.consider, len(closeness))]
-        for i in range(len(closeness)):
-            loc = self.big_grid_centre[closeness[i][1][0]][closeness[i][1][1]]
+        distance = distance[:min(self.consider, len(distance))]
+        for i in range(len(distance)):
+            loc = self.big_grid_centre[distance[i][1][0]][distance[i][1][1]]
             if debug:
                 print("l, loc:", l, loc)
             path = self.plan(l, loc, whole_path=True, display=debug)
-            closeness[i] = (1e18 if type(path) == type(None) else len(path), closeness[i][1])
+            distance[i] = (1e18 if path is None else len(path), distance[i][1])
             if debug:
-                print("Path length:", closeness[i][0])
+                print("Path length:", distance[i][0])
 
-        closeness.sort()
+        distance.sort()
         if debug:
-            print("Closest guys", closeness)
+            print("Closest guys", distance[:min(5, len(distance))])
 
-        closest = closeness[0]
+        closest = distance[0]
         self.big_grid[closest[1][0]][closest[1][1]] += 1
 
         if debug:
@@ -111,7 +134,6 @@ class MyPlanner:
 
     def nearest_clear(self, loc, passable):
         '''Utility function to find the nearest clear cell to a blocked cell'''
-        loc = loc[::-1]
         if not passable[loc]:
             best = (1e18, (-1, -1))
             for i in range(map_.height):  # y
@@ -205,9 +227,8 @@ class MyPlanner:
     def optimize_path(self, path: List[GridLocation]) -> List[GridLocation]:
         new_path = [path[0]]  # starting point always in path
         for i in range(1, len(path) - 1, 1):
-            if not ((abs(path[i - 1][0] - path[i][0]) < self.optimize_threshold and abs(path[i][0] - path[i + 1][0]) < self.optimize_threshold) or (
-                    abs(path[i - 1][1] - path[i][1]) < self.optimize_threshold and abs(
-                    path[i][1] - path[i + 1][1]) < self.optimize_threshold)):  # 3 consecutive points are on a straight line in either x or y direction
+            if not ((abs(path[i - 1][0] - path[i][0]) < self.optimize_threshold and abs(path[i][0] - path[i + 1][0]) < self.optimize_threshold) or
+                    (abs(path[i - 1][1] - path[i][1]) < self.optimize_threshold and abs(path[i][1] - path[i + 1][1]) < self.optimize_threshold)):  # 3 consecutive points are on a straight line in either x or y direction
                 new_path.append(path[i])
         new_path.append(path[-1])  # add last point
         return new_path

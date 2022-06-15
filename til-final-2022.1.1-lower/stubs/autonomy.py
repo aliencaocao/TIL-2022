@@ -30,7 +30,6 @@ from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
 from cv_service import CVService, MockCVService
 from nlp_service import NLPService, MockNLPService
 from planner import MyPlanner
-import copy
 
 # Setup logging in a nice readable format
 logging.basicConfig(level=logging.INFO,
@@ -44,8 +43,8 @@ ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune.
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
-CV_CONFIG_DIR = ''  # TODO
-CV_MODEL_DIR = 'epoch_12.pth'
+CV_CONFIG_DIR = 'universenet_custom_config.py'
+CV_MODEL_DIR = 'epoch_26.pth'
 
 
 # Convenience function to update locations of interest.
