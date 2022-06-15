@@ -18,6 +18,7 @@ def clean_up_env():
 
 # prep_env()  # only for laptop
 
+import time
 import logging
 from typing import List
 
@@ -38,9 +39,9 @@ logging.basicConfig(level=logging.INFO,
 
 # Define config variables in an easily accessible location
 # You may consider using a config file
-REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune.
+REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune, in meters
 ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
-ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune.
+ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
 CV_CONFIG_DIR = 'universenet_custom_config.py'
@@ -59,7 +60,7 @@ def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
 
 def main():
     # Initialize services
-    # cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
+    cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
     # loc_service = LocalizationService(host='192.168.20.55', port=5512)  # for real robot
@@ -85,20 +86,20 @@ def main():
     curr_wp: RealLocation = None
 
     # Tune here
-    tracker = PIDController(Kp=(0.4, 0.2), Kd=(0.4, 0.2), Ki=(0, 0))  # first: displacement, second: angle
+    tracker = PIDController(Kp=(0.4, 0.2), Kd=(0.4, 0.2), Ki=(0, 0))  # TODO: tune, first: displacement, second: angle
 
     # Initialize pose filter
     pose_filter = SimpleMovingAverage(n=10)
 
     # Define filter function to exclude clues seen before   
     new_clues = lambda c: c.clue_id not in seen_clues
+    prev_img_rpt_time = 0
 
     # Main loop
     while True:
         # Get new data
         pose, clues = loc_service.get_pose()
         pose = pose_filter.update(pose)
-        img = robot.camera.read_cv2_image(strategy='newest')
         if not pose:
             # no new data, continue to next iteration.
             continue
@@ -118,29 +119,28 @@ def main():
             update_locations(lois, new_lois)
             seen_clues.update([c.clue_id for c in clues])
 
-        """    # Process image and detect targets
-        targets = cv_service.targets_from_image(img)
+        if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
+            img = robot.camera.read_cv2_image(strategy='newest')
 
-        # Submit targets
-        if targets:
-            logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-            #logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))
-        """
+            # Process image and detect targets
+            targets = cv_service.targets_from_image(img)
+
+            # Submit targets
+            if targets:
+                prev_img_rpt_time = time.time()
+                logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
+                logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))
+
         if not curr_loi:
             if len(lois) == 0:
                 logging.getLogger('Main').info('No more locations of interest.')
                 explore_next = planner.get_explore(pose[:2])
                 if explore_next is None:
                     break
-                # plt.imshow(planner.big_grid)
-                # plt.title("Places explored so far and the one to explore next")
-                # plt.scatter([explore_next[0]], [explore_next[1]])
-                # plt.show()
                 lois.append(explore_next)
                 # break
 
             # Get new LOI
-            print(lois)
             lois.sort(key=lambda l: euclidean_distance(l, pose), reverse=True)
             curr_loi = lois.pop()
             logging.getLogger('Main').info('Current LOI set to: {}'.format(curr_loi))
@@ -155,7 +155,6 @@ def main():
                 # print("seen:",seen_clues)
                 curr_loi = None
             else:
-                # path = [curr_loi,curr_loi]
                 path.reverse()  # reverse so closest wp is last so that pop() is cheap , waypoint
                 curr_wp = None
                 logging.getLogger('Main').info('Path planned.')
@@ -168,7 +167,6 @@ def main():
                     curr_wp = path.pop()
                     logging.getLogger('Navigation').info('New waypoint: {}'.format(curr_wp))
 
-                # logging.getLogger('Navigation').info('Calculating angle')
                 # Calculate distance and heading to waypoint
                 dist_to_wp = euclidean_distance(pose, curr_wp)
                 ang_to_wp = np.degrees(np.arctan2(curr_wp[1] - pose[1], curr_wp[0] - pose[0]))
