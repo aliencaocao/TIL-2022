@@ -40,7 +40,7 @@ class CVService:
                 x1, y1, x2, y2, _confidence = [float(x) for x in detection]
                 detections.append(DetectedObject(
                     id=current_detection_id,
-                    cls="fallen" if class_id == 0 else "standing",
+                    cls=1 - class_id,
                     bbox=BoundingBox(x=x1, y=y1, w=x2-x1, h=y2-y1),
                 ))
                 print(f'Detected {"fallen" if class_id == 0 else "standing"}, conf {_confidence}')
