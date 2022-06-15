@@ -2,9 +2,12 @@ import subprocess
 
 
 def prep_env():
-    subprocess.check_output(['pip', 'install', 'pyastar2d'])
+    subprocess.check_output(['pip', 'install', './pyastar2d'])
     subprocess.check_output(['pip', 'install', 'mmcv_full-1.5.0-cp38-cp38-manylinux1_x86_64.whl'])
     subprocess.check_output(['pip', 'install', './UniverseNet'])
+    subprocess.check_output(['pip', 'install', '-U', 'torch-1.11.0+cu115-cp38-cp38-linux_x86_64.whl'])
+    subprocess.check_output(['pip', 'install', '-U', 'torchaudio-0.11.0+cu115-cp38-cp38-linux_x86_64.whl'])
+    subprocess.check_output(['pip', 'install', '-U', 'torchvision-0.12.0+cu115-cp38-cp38-linux_x86_64.whl'])
 
 
 def clean_up_env():
@@ -13,7 +16,7 @@ def clean_up_env():
     subprocess.check_output(['pip', 'uninstall', 'mmdet'])
 
 
-prep_env()
+# prep_env()  # only for laptop
 
 import logging
 from typing import List
@@ -21,7 +24,7 @@ from typing import List
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
 from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-from robomaster.robot import Robot  # Use this for real robot
+# from robomaster.robot import Robot  # Use this for real robot
 
 # Import your code
 from cv_service import CVService, MockCVService
@@ -41,7 +44,8 @@ ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune.
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
-CV_MODEL_DIR = ''  # TODO: Participant to fill in.
+CV_CONFIG_DIR = ''  # TODO
+CV_MODEL_DIR = 'epoch_12.pth'
 
 
 # Convenience function to update locations of interest.
@@ -56,17 +60,18 @@ def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
 
 def main():
     # Initialize services
-    # cv_service = CVService(model_dir=CV_MODEL_DIR)
+    # cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    loc_service = LocalizationService(host='192.168.20.55', port=5512)
-    # rep_service = ReportingService(host='localhost', port=5501)
+    # loc_service = LocalizationService(host='192.168.20.55', port=5512)  # for real robot
+    loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    rep_service = ReportingService(host='localhost', port=5501)  # only avail on simulator
     robot = Robot()
-    robot.initialize(conn_type="sta", sn="3JKDH2T001176G")
+    robot.initialize(conn_type="sta")
     robot.camera.start_video_stream(display=False, resolution='720p')
 
     # Start the run
-    # rep_service.start_run()
+    rep_service.start_run()  # only avail on simulator
 
     # Initialize planner
     map_: SignedDistanceGrid = loc_service.get_map()
@@ -215,4 +220,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-    clean_up_env()
+
+# clean_up_env()  # only for laptop
