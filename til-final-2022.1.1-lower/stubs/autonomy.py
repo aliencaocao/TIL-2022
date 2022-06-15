@@ -1,15 +1,33 @@
+import subprocess
+
+
+def prep_env():
+    subprocess.check_output(['pip', 'install', 'pyastar2d'])
+    subprocess.check_output(['pip', 'install', 'mmcv_full-1.5.0-cp38-cp38-manylinux1_x86_64.whl'])
+    subprocess.check_output(['pip', 'install', './UniverseNet'])
+
+
+def clean_up_env():
+    subprocess.check_output(['pip', 'uninstall', 'pyastar2d'])
+    subprocess.check_output(['pip', 'uninstall', 'mmcv-full'])
+    subprocess.check_output(['pip', 'uninstall', 'mmdet'])
+
+
+prep_env()
+
 import logging
 from typing import List
 
-from tilsdk import *                                            # import the SDK
-from tilsdk.utilities import PIDController, SimpleMovingAverage # import optional useful things
-# from tilsdk.mock_robomaster.robot import Robot                  # Use this for the simulator
-from robomaster.robot import Robot                             # Use this for real robot
+from tilsdk import *  # import the SDK
+from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
+from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
+from robomaster.robot import Robot  # Use this for real robot
 
 # Import your code
 from cv_service import CVService, MockCVService
-from nlp_service import NLPService
-from planner import Planner
+from nlp_service import NLPService, MockNLPService
+from planner import MyPlanner
+import copy
 
 # Setup logging in a nice readable format
 logging.basicConfig(level=logging.INFO,
@@ -18,14 +36,16 @@ logging.basicConfig(level=logging.INFO,
 
 # Define config variables in an easily accessible location
 # You may consider using a config file
-REACHED_THRESHOLD_M = 0.3   # TODO: Participant may tune.
+REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune.
 ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
-ROBOT_RADIUS_M = 0.17       # TODO: Participant may tune.
-NLP_MODEL_DIR = ''          # TODO: Participant to fill in.
-CV_MODEL_DIR = ''           # TODO: Participant to fill in.
+ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune.
+NLP_PREPROCESSOR_DIR = 'finals_audio_model'
+NLP_MODEL_DIR = 'model.onnx'
+CV_MODEL_DIR = ''  # TODO: Participant to fill in.
+
 
 # Convenience function to update locations of interest.
-def update_locations(old:List[RealLocation], new:List[RealLocation]) -> None:
+def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
     '''Update locations with no duplicates.'''
     if new:
         for loc in new:
@@ -33,38 +53,38 @@ def update_locations(old:List[RealLocation], new:List[RealLocation]) -> None:
                 logging.getLogger('update_locations').info('New location of interest: {}'.format(loc))
                 old.append(loc)
 
+
 def main():
     # Initialize services
-    cv_service = CVService(model_dir=CV_MODEL_DIR)
+    # cv_service = CVService(model_dir=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
-    nlp_service = NLPService(model_dir=NLP_MODEL_DIR)
-    loc_service = LocalizationService(host='localhost', port=5566)
-    rep_service = ReportingService(host='localhost', port=5501)
+    nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
+    loc_service = LocalizationService(host='192.168.20.55', port=5512)
+    # rep_service = ReportingService(host='localhost', port=5501)
     robot = Robot()
-    robot.initialize(conn_type="sta")
+    robot.initialize(conn_type="sta", sn="3JKDH2T001176G")
     robot.camera.start_video_stream(display=False, resolution='720p')
 
     # Start the run
-    rep_service.start_run()
+    # rep_service.start_run()
 
     # Initialize planner
-    map_:SignedDistanceGrid = loc_service.get_map()
-    map_ = map_.dilated(1.5*ROBOT_RADIUS_M/map_.scale)
-    planner = Planner(map_, sdf_weight=0.5)
+    map_: SignedDistanceGrid = loc_service.get_map()
+    map_ = map_.dilated(1.5 * ROBOT_RADIUS_M / map_.scale)
+    planner = MyPlanner(map_, waypoint_sparsity=0.4, optimize_threshold=3, consider=4)
 
     # Initialize variables
     seen_clues = set()
-    curr_loi:RealLocation = None
-    path:List[RealLocation] = []
-    lois:List[RealLocation] = []
-    curr_wp:RealLocation = None
+    curr_loi: RealLocation = None
+    path: List[RealLocation] = []
+    lois: List[RealLocation] = []
+    curr_wp: RealLocation = None
 
-    # Initialize tracker
-    # TODO: Participant to tune PID controller values.
-    tracker = PIDController(Kp=(0.0, 0.0), Kd=(0.0, 0.0), Ki=(0.0, 0.0))
+    # Tune here
+    tracker = PIDController(Kp=(0.4, 0.2), Kd=(0.4, 0.2), Ki=(0, 0))  # first: displacement, second: angle
 
     # Initialize pose filter
-    pose_filter = SimpleMovingAverage(n=5)
+    pose_filter = SimpleMovingAverage(n=10)
 
     # Define filter function to exclude clues seen before   
     new_clues = lambda c: c.clue_id not in seen_clues
@@ -75,45 +95,64 @@ def main():
         pose, clues = loc_service.get_pose()
         pose = pose_filter.update(pose)
         img = robot.camera.read_cv2_image(strategy='newest')
-        
         if not pose:
-            # now new data, continue to next iteration.
+            # no new data, continue to next iteration.
             continue
 
+        # Set this location as visited in the planner (so no need to visit here again if there are no clues)
+        planner.visit(pose[:2])
+
         # Filter out clues that were seen before
-        clues = filter(new_clues, clues)
+        clues = list(filter(new_clues, clues))
 
         # Process clues using NLP and determine any new locations of interest
         if clues:
-            new_loism, maybe_new_loism = nlp_service.locations_from_clues(clues)
+            print(clues)
+            new_lois = nlp_service.locations_from_clues(clues)  # new locations of interest
+            if len(new_lois):
+                logging.getLogger('Main').info('New location(s) of interest: {}.'.format(new_lois))
             update_locations(lois, new_lois)
-            # TODO: handle maybe new lois
             seen_clues.update([c.clue_id for c in clues])
 
-        # Process image and detect targets
+        """    # Process image and detect targets
         targets = cv_service.targets_from_image(img)
 
         # Submit targets
         if targets:
             logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-            logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))
-        
+            #logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))
+        """
         if not curr_loi:
             if len(lois) == 0:
                 logging.getLogger('Main').info('No more locations of interest.')
-                # TODO: You ran out of LOIs. You could perform and random search for new
-                # clues or targets
-                break
-            else:
-                # Get new LOI
-                lois.sort(key=lambda l: euclidean_distance(l, pose), reverse=True)
-                curr_loi = lois.pop()
-                logging.getLogger('Main').info('Current LOI set to: {}'.format(curr_loi))
+                explore_next = planner.get_explore(pose[:2])
+                if explore_next is None:
+                    break
+                # plt.imshow(planner.big_grid)
+                # plt.title("Places explored so far and the one to explore next")
+                # plt.scatter([explore_next[0]], [explore_next[1]])
+                # plt.show()
+                lois.append(explore_next)
+                # break
 
-                # Plan a path to the new LOI
-                logging.getLogger('Main').info('Planning path to: {}'.format(curr_loi))
-                path = planner.plan(pose[:2], curr_loi)
-                path.reverse() # reverse so closest wp is last so that pop() is cheap
+            # Get new LOI
+            print(lois)
+            lois.sort(key=lambda l: euclidean_distance(l, pose), reverse=True)
+            curr_loi = lois.pop()
+            logging.getLogger('Main').info('Current LOI set to: {}'.format(curr_loi))
+
+            # Plan a path to the new LOI
+            logging.getLogger('Main').info('Planning path to: {}'.format(curr_loi))
+
+            path = planner.plan(pose[:2], curr_loi, display=False)
+            if path is None:
+                logging.getLogger('Main').info('No possible path found, location skipped')
+                # print("lois",lois)
+                # print("seen:",seen_clues)
+                curr_loi = None
+            else:
+                # path = [curr_loi,curr_loi]
+                path.reverse()  # reverse so closest wp is last so that pop() is cheap , waypoint
                 curr_wp = None
                 logging.getLogger('Main').info('Path planned.')
         else:
@@ -124,11 +163,12 @@ def main():
                 if not curr_wp:
                     curr_wp = path.pop()
                     logging.getLogger('Navigation').info('New waypoint: {}'.format(curr_wp))
-                
+
+                # logging.getLogger('Navigation').info('Calculating angle')
                 # Calculate distance and heading to waypoint
                 dist_to_wp = euclidean_distance(pose, curr_wp)
-                ang_to_wp = np.degrees(np.arctan2(curr_wp[1]-pose[1], curr_wp[0]-pose[0]))
-                ang_diff = -(ang_to_wp - pose[2]) # body frame
+                ang_to_wp = np.degrees(np.arctan2(curr_wp[1] - pose[1], curr_wp[0] - pose[0]))
+                ang_diff = -(ang_to_wp - pose[2])  # body frame
 
                 # ensure ang_diff is in [-180, 180]
                 if ang_diff < -180:
@@ -137,7 +177,8 @@ def main():
                 if ang_diff > 180:
                     ang_diff -= 360
 
-                logging.getLogger('Navigation').debug('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
+                # logging.getLogger('Navigation').info('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
+                # logging.getLogger('Navigation').info('Pose: {}'.format(pose))
 
                 # Consider waypoint reached if within a threshold distance
                 if dist_to_wp < REACHED_THRESHOLD_M:
@@ -145,27 +186,27 @@ def main():
                     tracker.reset()
                     curr_wp = None
                     continue
-                
+
                 # Determine velocity commands given distance and heading to waypoint
                 vel_cmd = tracker.update((dist_to_wp, ang_diff))
 
+                # logging.getLogger('Navigation').info('dist: {} ang:{} vel:{}'.format(dist_to_wp,ang_diff,vel_cmd))
+
                 # reduce x velocity
                 vel_cmd[0] *= np.cos(np.radians(ang_diff))
-                
+
                 # If robot is facing the wrong direction, turn to face waypoint first before
                 # moving forward.
                 if abs(ang_diff) > ANGLE_THRESHOLD_DEG:
                     vel_cmd[0] = 0.0
-                
+
                 # Send command to robot
-                robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
-                
+                robot.chassis.drive_speed(x=vel_cmd[0] * 0.2, z=vel_cmd[1] * 0.5)
+
             else:
                 logging.getLogger('Navigation').info('End of path.')
                 curr_loi = None
 
-                # TODO: Perform search behaviour? Participant to complete.
-                
                 continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
@@ -174,3 +215,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    clean_up_env()
