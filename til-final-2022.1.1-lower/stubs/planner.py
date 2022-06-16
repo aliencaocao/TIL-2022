@@ -2,6 +2,7 @@ from typing import List, Tuple, Dict
 import math
 import pyastar2d
 import numpy as np
+import time
 from tilsdk.localization import *
 
 
@@ -52,7 +53,7 @@ class MyPlanner:
                 nc = self.map.grid_to_real(nc)
                 # print("gridctr",RealLocation(x_pos,y_pos),"nc",nc)
                 if self.big_grid_of(nc) != (j, i):
-                    self.big_grid[i][j] = 1
+                    self.big_grid[i][j] = 100
                 else:
                     self.big_grid_centre[i][j] = nc
 
@@ -231,3 +232,20 @@ class MyPlanner:
                 new_path.append(path[i])
         new_path.append(path[-1])  # add last point
         return new_path
+    
+    def wall_within_1m(self, l:RealLocation, angle:int) -> bool:
+        #Angle is expected to be 0, 90, 180, or 270
+        direction = round(angle/90)
+        g = self.map.real_to_grid(l)
+        x, y = g[0],g[1]
+        its = math.ceil(1/self.map.scale)
+        dx = [1, 0, -1 ,0]
+        dy = [0, 1, 0, -1]
+        for it in range(its):
+            x += dx[direction]
+            y += dy[direction]
+            if x<0 or y<0 or x>=self.map.grid.shape[1] or y>=self.map.grid.shape[0]:
+                return True #We at border
+            if self.map.grid[y][x] <= 0:
+                return True
+        return False

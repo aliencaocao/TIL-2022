@@ -25,7 +25,7 @@ from typing import List
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
 from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-from robomaster.robot import Robot  # Use this for real robot
+#from robomaster.robot import Robot  # Use this for real robot
 
 # Import your code
 from cv_service import CVService, MockCVService
@@ -57,6 +57,22 @@ def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
                 logging.getLogger('update_locations').info('New location of interest: {}'.format(loc))
                 old.append(loc)
 
+prev_img_rpt_time = time.time()                
+def do_cv():
+    global prev_img_rpt_time
+    if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
+    img = robot.camera.read_cv2_image(strategy='newest')
+
+    # Process image and detect targets
+    targets = cv_service.targets_from_image(img)
+
+    # Submit targets
+    if targets:
+        prev_img_rpt_time = time.time()
+        logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
+        # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
+
+                
 
 def main():
     # Initialize services
@@ -117,17 +133,7 @@ def main():
             update_locations(lois, new_lois)
             seen_clues.update([c.clue_id for c in clues])
 
-        if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
-            img = robot.camera.read_cv2_image(strategy='newest')
-
-            # Process image and detect targets
-            targets = cv_service.targets_from_image(img)
-
-            # Submit targets
-            if targets:
-                prev_img_rpt_time = time.time()
-                logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-                # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
+        do_cv()
 
         if not curr_loi:
             if len(lois) == 0:
@@ -203,11 +209,33 @@ def main():
                 # Send command to robot
                 robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
 
-            else:
-                logging.getLogger('Navigation').info('End of path.')
-                curr_loi = None
-
-                continue
+        else:
+            logging.getLogger('Navigation').info('End of path. Spinning now.')
+            curr_loi = None
+            
+            starting_angle = pose[2]
+            starting_angle %= 360
+            first_turn_angle = starting_angle%90
+            
+            robot.chassis.drive_speed(x=0, z=first_turn_angle)
+            time.sleep(1)
+            robot.chassis.drive_speed(x=0, z=0)
+            
+            current_angle = (starting_angle-first_turn_angle)%360
+            
+            if planner.wall_within_1m(pose,current_angle):
+                do_cv(debug=True)
+            
+            for spinning in range(3):
+                robot.chassis.drive_speed(x=0, z=90)
+                time.sleep(1)
+                robot.chassis.drive_speed(x=0, z=0)
+                current_angle = (current_angle-90)%360
+                if planner.wall_within_1m(pose,current_angle):
+                    do_cv(debug = True)
+                
+            logging.getLogger('Navigation').info('Done spinning. Moving on.')
+            continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
     logging.getLogger('Main').info('Mission Terminated.')   
