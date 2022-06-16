@@ -1,1 +1,0 @@
-cmd /c til-simulator --config config/sim_config.yml

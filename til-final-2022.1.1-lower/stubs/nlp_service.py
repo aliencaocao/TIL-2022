@@ -19,25 +19,16 @@ class NLPService:
         print('Initializing NLP service...')
         self.sess_options = ort.SessionOptions()
         self.sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        print(f'Available runtime providers: {ort.get_available_providers()}')
-        print('Loading preprocessor...')
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(preprocessor_dir)
-        print('Loading model...')
-        self.model = ort.InferenceSession(model_dir, sess_options=sess_options, providers=['CUDAExecutionProvider'])
+        self.model = ort.InferenceSession(model_dir, sess_options=self.sess_options, providers=['CUDAExecutionProvider'])
         self.id2label = {0: True, 1: False}  # 0: "angry_sad", 1: "happy_neutral", useful or not
-        print('NLP service initialized. Warming up...')
-        with open('sample.wav', 'rb') as f:
-            data = f.read()
-        start = time.time()
-        for i in range(5):
-            self.predict(data)
-        print(f'Warm up done. Average inference time: {(time.time() - start)/10}s')
+        print('NLP service initialized.')
 
     def predict(self, wav: bytes) -> bool:
         try:
             speech_array, sr = librosa.load(io.BytesIO(wav), sr=16000, mono=True)
-            features = processor(speech_array, sampling_rate=16000, return_tensors="np")
-            onnx_outputs = model.run(None, {model.get_inputs()[0].name: features.input_values})[0]
+            features = self.processor(speech_array, sampling_rate=16000, return_tensors="np")
+            onnx_outputs = self.model.run(None, {self.model.get_inputs()[0].name: features.input_values})[0]
             prediction = np.argmax(onnx_outputs, axis=-1)
             return self.id2label[prediction.squeeze().tolist()]  # returns useful or not
         except Exception as e:
