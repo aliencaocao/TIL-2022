@@ -1,10 +1,12 @@
 from typing import List, Tuple, Dict
+import math
+import pyastar2d
 import numpy as np
 from tilsdk.localization import *
 
 
 class MyPlanner:
-    def __init__(self, map_: SignedDistanceGrid = None, waypoint_sparsity=0.5, optimize_threshold=3, consider=4, biggrid_size=0.5):
+    def __init__(self, map_: SignedDistanceGrid = None, waypoint_sparsity=0.5, optimize_threshold=3, consider=4, biggrid_size=0.8):
         '''
         Parameters
         ----------
@@ -23,7 +25,7 @@ class MyPlanner:
         # ALL grids (including big_grid use [y][x] convention)
         self.optimize_threshold = optimize_threshold
         self.map = map_
-        self.bgrid = self.transform_add_border(map_.grid.copy())  # Grid which takes the borders into account
+        self.bgrid = self.transform_add_border(self.map.grid.copy())  # Grid which takes the borders into account
         self.astar_grid = self.transform_for_astar(self.bgrid.copy())
         self.waypoint_sparsity = waypoint_sparsity
         self.biggrid_size = biggrid_size
@@ -64,7 +66,7 @@ class MyPlanner:
 
     def transform_for_astar(self, grid):
         # Possible to edit this transform if u want
-        k = 100  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
+        k = 80  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
         grid2 = grid.copy()
         grid2[grid2 > 0] = 1 + k / (grid2[grid2 > 0])
         grid2[grid2 <= 0] = np.inf
@@ -85,9 +87,6 @@ class MyPlanner:
         for i in range(self.bg_idim):
             for j in range(self.bg_jdim):
                 m = min(m, self.big_grid[i][j])
-        if m == 1:  # Can comment out this part if u want the robot to vroom around infinitely
-            return None
-
         distance = []
         for i in range(self.bg_idim):
             for j in range(self.bg_jdim):
@@ -136,9 +135,9 @@ class MyPlanner:
         '''Utility function to find the nearest clear cell to a blocked cell'''
         if not passable[loc]:
             best = (1e18, (-1, -1))
-            for i in range(map_.height):  # y
-                for j in range(map_.width):  # x
-                    if map_.grid[(i, j)] > 0:
+            for i in range(self.map.height):  # y
+                for j in range(self.map.width):  # x
+                    if self.map.grid[(i, j)] > 0:
                         best = min(best, (self.heuristic(GridLocation(i, j), loc), (i, j)))
             loc = best[1]
         return loc

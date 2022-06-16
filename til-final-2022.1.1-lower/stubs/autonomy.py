@@ -25,7 +25,7 @@ from typing import List
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
 from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-# from robomaster.robot import Robot  # Use this for real robot
+from robomaster.robot import Robot  # Use this for real robot
 
 # Import your code
 from cv_service import CVService, MockCVService
@@ -63,20 +63,20 @@ def main():
     cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    # loc_service = LocalizationService(host='192.168.20.55', port=5512)  # for real robot
-    loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
-    rep_service = ReportingService(host='localhost', port=5501)  # only avail on simulator
+    loc_service = LocalizationService(host='192.168.20.56', port=5522)  # for real robot
+    # loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    # rep_service = ReportingService(host='localhost', port=5501)  # only avail on simulator
     robot = Robot()
-    robot.initialize(conn_type="sta")
+    robot.initialize(conn_type="sta", sn="3JKDH2T001U0H4")
     robot.camera.start_video_stream(display=False, resolution='720p')
 
     # Start the run
-    rep_service.start_run()  # only avail on simulator
+    # rep_service.start_run()  # only avail on simulator
 
     # Initialize planner
     map_: SignedDistanceGrid = loc_service.get_map()
     map_ = map_.dilated(1.5 * ROBOT_RADIUS_M / map_.scale)
-    planner = MyPlanner(map_, waypoint_sparsity=0.4, optimize_threshold=3, consider=4)
+    planner = MyPlanner(map_, waypoint_sparsity=0.4, optimize_threshold=3, consider=4, biggrid_size=0.8)
 
     # Initialize variables
     seen_clues = set()
@@ -86,7 +86,7 @@ def main():
     curr_wp: RealLocation = None
 
     # Tune here
-    tracker = PIDController(Kp=(0.4, 0.2), Kd=(0.4, 0.2), Ki=(0, 0))  # TODO: tune, first: displacement, second: angle
+    tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.15, 0.1), Kd=(0.3, 0.2))
 
     # Initialize pose filter
     pose_filter = SimpleMovingAverage(n=10)
@@ -94,7 +94,6 @@ def main():
     # Define filter function to exclude clues seen before   
     new_clues = lambda c: c.clue_id not in seen_clues
     prev_img_rpt_time = 0
-
     # Main loop
     while True:
         # Get new data
@@ -112,8 +111,7 @@ def main():
 
         # Process clues using NLP and determine any new locations of interest
         if clues:
-            print(clues)
-            new_lois = nlp_service.locations_from_clues(clues)  # new locations of interest
+            new_lois, maybe_useful_lois = nlp_service.locations_from_clues(clues)  # new locations of interest  TODO: use maybe useful lois
             if len(new_lois):
                 logging.getLogger('Main').info('New location(s) of interest: {}.'.format(new_lois))
             update_locations(lois, new_lois)
@@ -129,7 +127,7 @@ def main():
             if targets:
                 prev_img_rpt_time = time.time()
                 logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-                logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))
+                # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
 
         if not curr_loi:
             if len(lois) == 0:
@@ -203,7 +201,7 @@ def main():
                     vel_cmd[0] = 0.0
 
                 # Send command to robot
-                robot.chassis.drive_speed(x=vel_cmd[0] * 0.2, z=vel_cmd[1] * 0.5)
+                robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
 
             else:
                 logging.getLogger('Navigation').info('End of path.')
@@ -212,7 +210,7 @@ def main():
                 continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
-    logging.getLogger('Main').info('Mission Terminated.')
+    logging.getLogger('Main').info('Mission Terminated.')   
 
 
 if __name__ == '__main__':

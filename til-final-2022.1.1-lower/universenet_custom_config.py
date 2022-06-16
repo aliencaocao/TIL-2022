@@ -64,7 +64,7 @@ model = dict(
     test_cfg=dict(
         nms_pre=1000,
         min_bbox_size=0,
-        score_thr=0.5,
+        score_thr=0.3,
         nms=dict(type='nms', iou_threshold=0.6),
         max_per_img=1000))
 
@@ -117,7 +117,7 @@ test_pipeline = [
             # dict(type='RandomFlip'),  # simulate robot
             dict(type='Normalize', **img_norm_cfg),
             dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
+            dict(type='DefaultFormatBundle'),
             dict(type='Collect', keys=['img']),
         ])
 ]

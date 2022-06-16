@@ -19,18 +19,10 @@ class NLPService:
         print('Initializing NLP service...')
         self.sess_options = ort.SessionOptions()
         self.sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        print('Loading preprocessor...')
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(preprocessor_dir)
-        print('Loading model...')
         self.model = ort.InferenceSession(model_dir, sess_options=self.sess_options, providers=['CUDAExecutionProvider'])
         self.id2label = {0: True, 1: False}  # 0: "angry_sad", 1: "happy_neutral", useful or not
-        print('NLP service initialized. Warming up...')
-        with open('sample.wav', 'rb') as f:
-            data = f.read()
-        start = time.time()
-        for i in range(5):
-            self.predict(data)
-        print(f'Warm up done. Average inference time: {(time.time() - start)/5}s')
+        print('NLP service initialized.')
 
     def predict(self, wav: bytes) -> bool:
         try:
