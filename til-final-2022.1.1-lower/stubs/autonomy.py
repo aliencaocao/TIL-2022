@@ -16,7 +16,7 @@ def clean_up_env():
     subprocess.check_output(['pip', 'uninstall', 'mmdet'])
 
 
-# prep_env()  # only for laptop
+prep_env()  # only for laptop
 
 import time
 import logging
@@ -25,9 +25,8 @@ from typing import List
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
 from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-#from robomaster.robot import Robot  # Use this for real robot
+from robomaster.robot import Robot  # Use this for real robot
 
-# Import your code
 from cv_service import CVService, MockCVService
 from nlp_service import NLPService, MockNLPService
 from planner import MyPlanner
@@ -42,10 +41,12 @@ logging.basicConfig(level=logging.INFO,
 REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune, in meters
 ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
+tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.15, 0.1), Kd=(0.3, 0.2))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
 CV_CONFIG_DIR = 'universenet_custom_config.py'
-CV_MODEL_DIR = 'epoch_26.pth'
+CV_MODEL_DIR = 'epoch_34.pth'
+prev_img_rpt_time = 0
 
 
 # Convenience function to update locations of interest.
@@ -57,22 +58,21 @@ def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
                 logging.getLogger('update_locations').info('New location of interest: {}'.format(loc))
                 old.append(loc)
 
-prev_img_rpt_time = time.time()                
+
 def do_cv():
     global prev_img_rpt_time
     if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
-    img = robot.camera.read_cv2_image(strategy='newest')
+        img = robot.camera.read_cv2_image(strategy='newest')
 
-    # Process image and detect targets
-    targets = cv_service.targets_from_image(img)
+        # Process image and detect targets
+        targets = cv_service.targets_from_image(img)
 
-    # Submit targets
-    if targets:
-        prev_img_rpt_time = time.time()
-        logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-        # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
+        # Submit targets
+        if targets:
+            prev_img_rpt_time = time.time()
+            logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
+            # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
 
-                
 
 def main():
     # Initialize services
@@ -101,15 +101,11 @@ def main():
     lois: List[RealLocation] = []
     curr_wp: RealLocation = None
 
-    # Tune here
-    tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.15, 0.1), Kd=(0.3, 0.2))
-
     # Initialize pose filter
     pose_filter = SimpleMovingAverage(n=10)
 
     # Define filter function to exclude clues seen before   
     new_clues = lambda c: c.clue_id not in seen_clues
-    prev_img_rpt_time = 0
     # Main loop
     while True:
         # Get new data
@@ -209,36 +205,36 @@ def main():
                 # Send command to robot
                 robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
 
-        else:
-            logging.getLogger('Navigation').info('End of path. Spinning now.')
-            curr_loi = None
-            
-            starting_angle = pose[2]
-            starting_angle %= 360
-            first_turn_angle = starting_angle%90
-            
-            robot.chassis.drive_speed(x=0, z=first_turn_angle)
-            time.sleep(1)
-            robot.chassis.drive_speed(x=0, z=0)
-            
-            current_angle = (starting_angle-first_turn_angle)%360
-            
-            if planner.wall_within_1m(pose,current_angle):
-                do_cv(debug=True)
-            
-            for spinning in range(3):
-                robot.chassis.drive_speed(x=0, z=90)
+            else:
+                logging.getLogger('Navigation').info('End of path. Spinning now.')
+                curr_loi = None
+
+                starting_angle = pose[2]
+                starting_angle %= 360
+                first_turn_angle = starting_angle % 90
+
+                robot.chassis.drive_speed(x=0, z=first_turn_angle)
                 time.sleep(1)
                 robot.chassis.drive_speed(x=0, z=0)
-                current_angle = (current_angle-90)%360
-                if planner.wall_within_1m(pose,current_angle):
-                    do_cv(debug = True)
-                
-            logging.getLogger('Navigation').info('Done spinning. Moving on.')
-            continue
+
+                current_angle = (starting_angle - first_turn_angle) % 360
+
+                if planner.wall_within_1m(pose, current_angle):
+                    do_cv()
+
+                for spinning in range(3):
+                    robot.chassis.drive_speed(x=0, z=90)
+                    time.sleep(1)
+                    robot.chassis.drive_speed(x=0, z=0)
+                    current_angle = (current_angle - 90) % 360
+                    if planner.wall_within_1m(pose, current_angle):
+                        do_cv()
+
+                logging.getLogger('Navigation').info('Done spinning. Moving on.')
+                continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
-    logging.getLogger('Main').info('Mission Terminated.')   
+    logging.getLogger('Main').info('Mission Terminated.')
 
 
 if __name__ == '__main__':

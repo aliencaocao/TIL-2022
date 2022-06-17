@@ -19,11 +19,13 @@ CV/scripts/val-split/val_labels
 CV/to_wbf
 CV/yolov5
 CV/rcnn
+til-final-2022.1.1-lower/results
 
 # Other
 /.idea
 *.zip
 *.pt
+*.pth
 *.onnx
 /til-final
 *.whl

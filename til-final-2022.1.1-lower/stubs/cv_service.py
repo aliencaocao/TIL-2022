@@ -2,6 +2,8 @@ from typing import List, Any
 from tilsdk.cv.types import *
 from tilsdk.cv import DetectedObject, BoundingBox
 from mmdet.apis import init_detector, inference_detector
+from mmcv.cnn import fuse_conv_bn
+from mmcv.runner import wrap_fp16_model
 
 img_id = 0  # for debugging only
 
@@ -18,6 +20,9 @@ class CVService:
         '''
         print('Initializing CV service...')
         self.model = init_detector(config_file, checkpoint_file, device="cuda:0")
+        # TODO: below 2 lines need test
+        wrap_fp16_model(self.model)
+        self.model = fuse_conv_bn(self.model)
         print('CV service initialized.')
 
     def targets_from_image(self, img) -> List[DetectedObject]:
@@ -44,12 +49,12 @@ class CVService:
                 detections.append(DetectedObject(
                     id=current_detection_id,
                     cls=1 - class_id,
-                    bbox=BoundingBox(x=x1, y=y1, w=x2 - x1, h=y2 - y1),
+                    bbox=BoundingBox(x=(x1+x2)/2, y=(y1+y2)/2, w=x2-x1, h=y2-y1),
                 ))
                 print(f'Detected {"fallen" if class_id == 0 else "standing"}, conf {_confidence}')
                 current_detection_id += 1
                 img_id += 1
-                # self.model.show_result(img, result, out_file=f'result{img_id} - {current_detection_id}.jpg')
+                self.model.show_result(img, result, out_file=f'results/result{img_id} - {current_detection_id}.jpg')
 
         return detections
 

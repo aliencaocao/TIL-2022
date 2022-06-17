@@ -143,7 +143,7 @@ class MyPlanner:
             loc = best[1]
         return loc
 
-    def plan(self, start: RealLocation, goal: RealLocation, whole_path: bool = False, display: bool = True) -> List[RealLocation]:
+    def plan(self, start: RealLocation, goal: RealLocation, whole_path: bool = False, display: bool = False) -> List[RealLocation]:
         '''Plan in real coordinates.
 
         Raises NoPathFileException path is not found.
@@ -173,7 +173,7 @@ class MyPlanner:
         path = [self.map.grid_to_real(wp) for wp in path]
         return path
 
-    def plan_grid(self, start: GridLocation, goal: GridLocation, whole_path: bool = False, debug=False) -> List[GridLocation]:
+    def plan_grid(self, start: GridLocation, goal: GridLocation, whole_path: bool = False, debug: bool = False) -> List[GridLocation]:
         '''Plan in grid coordinates.
 
         Raises NoPathFileException path is not found.
@@ -232,20 +232,20 @@ class MyPlanner:
                 new_path.append(path[i])
         new_path.append(path[-1])  # add last point
         return new_path
-    
-    def wall_within_1m(self, l:RealLocation, angle:int) -> bool:
-        #Angle is expected to be 0, 90, 180, or 270
-        direction = round(angle/90)
+
+    def wall_within_1m(self, l: RealLocation, angle: int) -> bool:
+        # Angle is expected to be 0, 90, 180, or 270
+        direction = round(angle / 90, 2)
         g = self.map.real_to_grid(l)
-        x, y = g[0],g[1]
-        its = math.ceil(1/self.map.scale)
-        dx = [1, 0, -1 ,0]
+        x, y = g[0], g[1]
+        its = math.ceil(1 / self.map.scale)
+        dx = [1, 0, -1, 0]
         dy = [0, 1, 0, -1]
         for it in range(its):
             x += dx[direction]
             y += dy[direction]
-            if x<0 or y<0 or x>=self.map.grid.shape[1] or y>=self.map.grid.shape[0]:
-                return True #We at border
+            if x < 0 or y < 0 or x >= self.map.grid.shape[1] or y >= self.map.grid.shape[0]:
+                return True  # We at border
             if self.map.grid[y][x] <= 0:
                 return True
         return False
