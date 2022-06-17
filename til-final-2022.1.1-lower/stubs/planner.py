@@ -6,6 +6,19 @@ import time
 from tilsdk.localization import *
 
 
+def visualise_path(path, map):
+    pathmap = map.grid.copy()
+    pathmap = pathmap > 0
+    pathmap = pathmap.astype("int32")
+    gridpath = [map.real_to_grid(x) if isinstance(x, RealLocation) else x for x in path]
+    gridpathx = [x[0] for x in gridpath]
+    gridpathy = [x[1] for x in gridpath]
+    plt.imshow(pathmap)
+    plt.scatter(gridpathx, gridpathy, c=np.arange(len(gridpathx)), cmap='Greys')
+    plt.title("Path: White -> start, black -> end")
+    plt.show()
+
+
 class MyPlanner:
     def __init__(self, map_: SignedDistanceGrid = None, waypoint_sparsity=0.5, optimize_threshold=3, consider=4, biggrid_size=0.8):
         '''
@@ -67,7 +80,7 @@ class MyPlanner:
 
     def transform_for_astar(self, grid):
         # Possible to edit this transform if u want
-        k = 80  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
+        k = 500  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
         grid2 = grid.copy()
         grid2[grid2 > 0] = 1 + k / (grid2[grid2 > 0])
         grid2[grid2 <= 0] = np.inf
@@ -78,6 +91,11 @@ class MyPlanner:
 
     def visit(self, l: RealLocation):
         indices = self.big_grid_of(l)
+        # print("Location:", l)
+        # print("indices:", indices)
+        # print("bg_idim:", self.bg_idim)
+        # print("bg_jdim:", self.bg_jdim)
+        indices = (min(indices[0], self.bg_jdim - 1), min(indices[1], self.bg_idim - 1))
         self.big_grid[indices[1]][indices[0]] = max(1, self.big_grid[indices[1]][indices[0]])
 
     def get_explore(self, l: RealLocation, debug: bool = False):  # Call this to get a location to go to if there are no locations of interest left
@@ -235,7 +253,7 @@ class MyPlanner:
 
     def wall_within_1m(self, l: RealLocation, angle: int) -> bool:
         # Angle is expected to be 0, 90, 180, or 270
-        direction = round(angle / 90, 2)
+        direction = int(round(angle / 90, 2))
         g = self.map.real_to_grid(l)
         x, y = g[0], g[1]
         its = math.ceil(1 / self.map.scale)

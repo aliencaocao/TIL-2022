@@ -21,7 +21,7 @@ class NLPService:
         self.sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(preprocessor_dir)
         self.model = ort.InferenceSession(model_dir, sess_options=self.sess_options, providers=['CUDAExecutionProvider'])
-        self.id2label = {0: True, 1: False}  # 0: "angry_sad", 1: "happy_neutral", useful or not
+        self.id2label = {0: True, 1: False}  # 0: "angry or sad", 1: "happy or neutral", mapping: useful or not
         print('NLP service initialized.')
 
     def predict(self, wav: bytes) -> bool:

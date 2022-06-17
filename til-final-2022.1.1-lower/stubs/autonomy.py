@@ -1,23 +1,3 @@
-import subprocess
-
-
-def prep_env():
-    subprocess.check_output(['pip', 'install', './pyastar2d'])
-    subprocess.check_output(['pip', 'install', 'mmcv_full-1.5.0-cp38-cp38-manylinux1_x86_64.whl'])
-    subprocess.check_output(['pip', 'install', './UniverseNet'])
-    subprocess.check_output(['pip', 'install', '-U', 'torch-1.11.0+cu115-cp38-cp38-linux_x86_64.whl'])
-    subprocess.check_output(['pip', 'install', '-U', 'torchaudio-0.11.0+cu115-cp38-cp38-linux_x86_64.whl'])
-    subprocess.check_output(['pip', 'install', '-U', 'torchvision-0.12.0+cu115-cp38-cp38-linux_x86_64.whl'])
-
-
-def clean_up_env():
-    subprocess.check_output(['pip', 'uninstall', 'pyastar2d'])
-    subprocess.check_output(['pip', 'uninstall', 'mmcv-full'])
-    subprocess.check_output(['pip', 'uninstall', 'mmdet'])
-
-
-prep_env()  # only for laptop
-
 import time
 import logging
 from typing import List
@@ -41,7 +21,7 @@ logging.basicConfig(level=logging.INFO,
 REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune, in meters
 ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
-tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.15, 0.1), Kd=(0.3, 0.2))
+tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.1, 0.0), Kd=(0, 0))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
 CV_CONFIG_DIR = 'universenet_custom_config.py'
@@ -59,31 +39,30 @@ def update_locations(old: List[RealLocation], new: List[RealLocation]) -> None:
                 old.append(loc)
 
 
-def do_cv():
-    global prev_img_rpt_time
-    if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
-        img = robot.camera.read_cv2_image(strategy='newest')
-
-        # Process image and detect targets
-        targets = cv_service.targets_from_image(img)
-
-        # Submit targets
-        if targets:
-            prev_img_rpt_time = time.time()
-            logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-            # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
-
-
 def main():
+    def do_cv():
+        global prev_img_rpt_time
+        if not prev_img_rpt_time or time.time() - prev_img_rpt_time >= 1:  # throttle to 1 submission per second, and only read img if necessary
+            img = robot.camera.read_cv2_image(strategy='newest')
+
+            # Process image and detect targets
+            targets = cv_service.targets_from_image(img)
+
+            # Submit targets
+            if targets:
+                prev_img_rpt_time = time.time()
+                logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
+                # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
+
     # Initialize services
     cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    loc_service = LocalizationService(host='192.168.20.56', port=5522)  # for real robot
-    # loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
+    # loc_service = LocalizationService(host='localhostcv_service', port=5566)  # for simulator
     # rep_service = ReportingService(host='localhost', port=5501)  # only avail on simulator
     robot = Robot()
-    robot.initialize(conn_type="sta", sn="3JKDH2T001U0H4")
+    robot.initialize(conn_type="sta", sn="3JKDH2T0014VYK")
     robot.camera.start_video_stream(display=False, resolution='720p')
 
     # Start the run
@@ -91,6 +70,8 @@ def main():
 
     # Initialize planner
     map_: SignedDistanceGrid = loc_service.get_map()
+    # cv2.imshow("ImageWindow", map_.grid)
+    # cv2.waitKey()
     map_ = map_.dilated(1.5 * ROBOT_RADIUS_M / map_.scale)
     planner = MyPlanner(map_, waypoint_sparsity=0.4, optimize_threshold=3, consider=4, biggrid_size=0.8)
 
@@ -111,6 +92,8 @@ def main():
         # Get new data
         pose, clues = loc_service.get_pose()
         pose = pose_filter.update(pose)
+        pose = RealPose(min(pose[0], 7), min(pose[1], 5), pose[2])  # prevents out of bounds errors
+        pose = RealPose(max(pose[0], 0), max(pose[1], 0), pose[2])  # prevents out of bounds errors
         if not pose:
             # no new data, continue to next iteration.
             continue
@@ -151,8 +134,6 @@ def main():
             path = planner.plan(pose[:2], curr_loi, display=False)
             if path is None:
                 logging.getLogger('Main').info('No possible path found, location skipped')
-                # print("lois",lois)
-                # print("seen:",seen_clues)
                 curr_loi = None
             else:
                 path.reverse()  # reverse so closest wp is last so that pop() is cheap , waypoint
@@ -206,7 +187,7 @@ def main():
                 robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
 
             else:
-                logging.getLogger('Navigation').info('End of path. Spinning now.')
+                print('End of path. Spinning now.')
                 curr_loi = None
 
                 starting_angle = pose[2]
@@ -224,13 +205,14 @@ def main():
 
                 for spinning in range(3):
                     robot.chassis.drive_speed(x=0, z=90)
-                    time.sleep(1)
+                    time.sleep(0.98)
                     robot.chassis.drive_speed(x=0, z=0)
                     current_angle = (current_angle - 90) % 360
                     if planner.wall_within_1m(pose, current_angle):
+                        time.sleep(2)
                         do_cv()
 
-                logging.getLogger('Navigation').info('Done spinning. Moving on.')
+                print('Done spinning. Moving on.')
                 continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
@@ -239,5 +221,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# clean_up_env()  # only for laptop
