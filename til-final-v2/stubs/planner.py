@@ -143,6 +143,8 @@ class MyPlanner:
 
     def nearest_clear(self, loc, passable):
         '''Utility function to find the nearest clear cell to a blocked cell'''
+        loc = min(loc[0],self.map.grid.shape[0]-1),min(loc[1],self.map.grid.shape[1]-1)
+        loc = max(loc[0],0),max(loc[1],0)
         if not passable[loc]:
             best = (1e18, (-1, -1))
             for i in range(self.map.height):  # y
@@ -173,10 +175,10 @@ class MyPlanner:
         path
             List of RealLocation from start to goal.
         '''
-
         self.path = self.plan_grid(self.map.real_to_grid(start), self.map.real_to_grid(goal), whole_path)
         if self.path is None:
             return None
+        self.path = self.path + self.path[-1:] # Duplicate destination wp to avoid bug in main loop which happens for the final waypoint as the path list is empty
         if display:
             gridpath = [self.map.real_to_grid(x) if isinstance(x, RealLocation) else x for x in self.path]
             self.gridpathx = [x[0] for x in gridpath]
@@ -233,7 +235,7 @@ class MyPlanner:
             return path
         coeff = max(coeff, 1)
         path = path[:1] + path[:-1:coeff] + path[-1:]  # Take the 1st, last, and every 20th waypoint in the middle
-        path.append(path[-1])  # Duplicate last waypoint to avoid bug in main loop
+        # Duplication of last waypoint to avoid bug in main loop has been moved to plan()
         return self.optimize_path(path)
 
     def optimize_path(self, path: List[GridLocation]) -> List[GridLocation]:

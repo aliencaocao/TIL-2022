@@ -127,7 +127,7 @@ def start_server():
 class SimRobot:
     '''Simulated robot.'''
 
-    def __init__(self, pose=(0,0,0), vel=(0,0,0), timeout:float=0.5):
+    def __init__(self, pose=(0,0,0), vel=(0,0,0), timeout:float=1.0):
         '''
         Parameters
         ----------

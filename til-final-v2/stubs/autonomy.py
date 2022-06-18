@@ -61,10 +61,10 @@ def main():
                 logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
 
     # Initialize services
-    # cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
-    cv_service = MockCVService(model_dir=CV_MODEL_DIR)
-    # nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
+    cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
+    # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
+    nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
+    # nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
     # loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
     loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
     rep_service = ReportingService(host='localhost', port=5566)  # only avail on simulator
@@ -88,6 +88,8 @@ def main():
     path: List[RealLocation] = []
     lois: List[RealLocation] = []
     curr_wp: RealLocation = None
+    spin_direction_lock = False
+    spin_sign = 0 #-1 or 1 when spin_direction_lock is active
 
     # Initialize pose filter
     pose_filter = SimpleMovingAverage(n=10)
@@ -168,7 +170,15 @@ def main():
                 if ang_diff > 180:
                     ang_diff -= 360
 
-                # logging.getLogger('Navigation').info('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
+                if spin_direction_lock:
+                    if spin_sign == 1 and ang_diff < 0:
+                        #print("Spin direction lock, modifying ang_diff +360")
+                        ang_diff += 360
+                    elif spin_sign == -1 and ang_diff >0:
+                        #print("Spin direction lock, modifying ang_diff -360")
+                        ang_diff -= 360
+
+                #logging.getLogger('Navigation').info('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
                 # logging.getLogger('Navigation').info('Pose: {}'.format(pose))
 
                 # Consider waypoint reached if within a threshold distance
@@ -189,7 +199,12 @@ def main():
                 # If robot is facing the wrong direction, turn to face waypoint first before
                 # moving forward.
                 if abs(ang_diff) > ANGLE_THRESHOLD_DEG:
+                    spin_direction_lock = True
+                    spin_sign = np.sign(ang_diff)
                     vel_cmd[0] = 0.0
+                else:
+                    spin_direction_lock = False
+                    spin_sign = 0
 
                 # Send command to robot
                 robot.chassis.drive_speed(x=vel_cmd[0], z=vel_cmd[1])
@@ -206,11 +221,15 @@ def main():
                 time.sleep(1)
                 robot.chassis.drive_speed(x=0, z=0)
                 # robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/2))  # for real robot
+                print("First_turn_angle",first_turn_angle)
 
                 current_angle = (starting_angle - first_turn_angle) % 360
 
                 if planner.wall_within_1m(pose, current_angle):
+                    print("Doing angle",current_angle)
                     do_cv()
+                else:
+                    print("Skipping angle",current_angle)
 
                 for spinning in range(3):
                     robot.chassis.drive_speed(x=0, z=90)
@@ -219,10 +238,15 @@ def main():
                     # robot.chassis.move(z=90, z_speed=45)  # for real robot
                     current_angle = (current_angle - 90) % 360
                     if planner.wall_within_1m(pose, current_angle):
+                        print("Doing angle",current_angle)
                         time.sleep(2)
                         do_cv()
+                    else:
+                        print("Skipping angle",current_angle)
 
                 print('Done spinning. Moving on.')
+                #Reset the pose_filter
+                pose_filter = SimpleMovingAverage(n=10)
                 continue
 
     robot.chassis.drive_speed(x=0.0, y=0.0, z=0.0)  # set stop for safety
