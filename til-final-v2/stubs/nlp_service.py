@@ -81,4 +81,4 @@ class MockNLPService:
         '''
         locations = [c.location for c in clues]
 
-        return locations
+        return locations, locations

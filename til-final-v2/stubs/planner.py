@@ -4,19 +4,7 @@ import pyastar2d
 import numpy as np
 import time
 from tilsdk.localization import *
-
-
-def visualise_path(path, map):
-    pathmap = map.grid.copy()
-    pathmap = pathmap > 0
-    pathmap = pathmap.astype("int32")
-    gridpath = [map.real_to_grid(x) if isinstance(x, RealLocation) else x for x in path]
-    gridpathx = [x[0] for x in gridpath]
-    gridpathy = [x[1] for x in gridpath]
-    plt.imshow(pathmap)
-    plt.scatter(gridpathx, gridpathy, c=np.arange(len(gridpathx)), cmap='Greys')
-    plt.title("Path: White -> start, black -> end")
-    plt.show()
+from matplotlib import pyplot as plt
 
 
 class MyPlanner:
@@ -49,6 +37,9 @@ class MyPlanner:
         self.big_grid_centre = [[0 for j in range(self.bg_jdim)] for i in range(self.bg_idim)]
         self.consider = consider
         self.passable = self.map.grid > 0
+        self.path = None
+        self.plt_init = False
+        self.scat = None
 
         for i in range(self.bg_idim):
             for j in range(self.bg_jdim):
@@ -183,13 +174,16 @@ class MyPlanner:
             List of RealLocation from start to goal.
         '''
 
-        path = self.plan_grid(self.map.real_to_grid(start), self.map.real_to_grid(goal), whole_path)
-        if path is None:
-            return path
+        self.path = self.plan_grid(self.map.real_to_grid(start), self.map.real_to_grid(goal), whole_path)
+        if self.path is None:
+            return None
         if display:
-            visualise_path(path, self.map)
-        path = [self.map.grid_to_real(wp) for wp in path]
-        return path
+            gridpath = [self.map.real_to_grid(x) if isinstance(x, RealLocation) else x for x in self.path]
+            self.gridpathx = [x[0] for x in gridpath]
+            self.gridpathy = [x[1] for x in gridpath]
+            self.visualise_path()
+        self.path = [self.map.grid_to_real(wp) for wp in self.path]
+        return self.path
 
     def plan_grid(self, start: GridLocation, goal: GridLocation, whole_path: bool = False, debug: bool = False) -> List[GridLocation]:
         '''Plan in grid coordinates.
@@ -267,3 +261,21 @@ class MyPlanner:
             if self.map.grid[y][x] <= 0:
                 return True
         return False
+
+    def visualise_path(self):
+        if not self.plt_init:
+            pathmap = self.map.grid.copy()
+            pathmap = pathmap > 0
+            pathmap = pathmap.astype("int32")
+            plt.imshow(pathmap)
+            plt.title("Path: white -> start, black -> end")
+            self.scat = plt.scatter(self.gridpathx, self.gridpathy, c=np.arange(len(self.gridpathx)), cmap='Greys')
+            self.plt_init = True
+        else:
+            self.scat.remove()
+            self.scat = plt.scatter(self.gridpathx, self.gridpathy, c=np.arange(len(self.gridpathx)), cmap='Greys')
+        self.visualise_update()
+
+    def visualise_update(self):
+        plt.pause(0.05)
+        plt.draw()

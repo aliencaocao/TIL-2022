@@ -1,6 +1,6 @@
 import os
 import sys
-os.environ['PYTHONPATH'] += ':' + os.path.join(os.getcwd(), 'site-packages')
+os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', '') + ':' + os.path.join(os.getcwd(), 'site-packages')
 sys.path.insert(0, os.path.join(os.getcwd(), 'site-packages'))
 print(sys.path)
 
@@ -11,7 +11,7 @@ from typing import List
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
 from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-from robomaster.robot import Robot  # Use this for real robot
+# from robomaster.robot import Robot  # Use this for real robot
 
 from cv_service import CVService, MockCVService
 from nlp_service import NLPService, MockNLPService
@@ -57,22 +57,23 @@ def main():
             # Submit targets
             if targets:
                 prev_img_rpt_time = time.time()
+                rpt = rep_service.report(pose, img, targets)
                 logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
-                # logging.getLogger('Reporting').info(rep_service.report(pose, img, targets))  # Only for real robot
 
     # Initialize services
-    cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
-    # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
-    nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
-    # loc_service = LocalizationService(host='localhostcv_service', port=5566)  # for simulator
-    # rep_service = ReportingService(host='localhost', port=5501)  # only avail on simulator
+    # cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
+    cv_service = MockCVService(model_dir=CV_MODEL_DIR)
+    # nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
+    nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
+    # loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
+    loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    rep_service = ReportingService(host='localhost', port=5566)  # only avail on simulator
     robot = Robot()
-    robot.initialize(conn_type="sta", sn="3JKDH2T0014VYK")
+    robot.initialize(conn_type="sta")
     robot.camera.start_video_stream(display=False, resolution='720p')
 
     # Start the run
-    # rep_service.start_run()  # only avail on simulator
+    rep_service.start_run()  # only avail on simulator
 
     # Initialize planner
     map_: SignedDistanceGrid = loc_service.get_map()
@@ -95,6 +96,7 @@ def main():
     new_clues = lambda c: c.clue_id not in seen_clues
     # Main loop
     while True:
+        if path: planner.visualise_update()  # just for updating
         # Get new data
         pose, clues = loc_service.get_pose()
         pose = pose_filter.update(pose)
@@ -137,7 +139,7 @@ def main():
             # Plan a path to the new LOI
             logging.getLogger('Main').info('Planning path to: {}'.format(curr_loi))
 
-            path = planner.plan(pose[:2], curr_loi, display=False)
+            path = planner.plan(pose[:2], curr_loi, display=True)
             if path is None:
                 logging.getLogger('Main').info('No possible path found, location skipped')
                 curr_loi = None
@@ -203,6 +205,7 @@ def main():
                 robot.chassis.drive_speed(x=0, z=first_turn_angle)
                 time.sleep(1)
                 robot.chassis.drive_speed(x=0, z=0)
+                # robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/2))  # for real robot
 
                 current_angle = (starting_angle - first_turn_angle) % 360
 
@@ -211,8 +214,9 @@ def main():
 
                 for spinning in range(3):
                     robot.chassis.drive_speed(x=0, z=90)
-                    time.sleep(0.98)
+                    time.sleep(1)
                     robot.chassis.drive_speed(x=0, z=0)
+                    # robot.chassis.move(z=90, z_speed=45)  # for real robot
                     current_angle = (current_angle - 90) % 360
                     if planner.wall_within_1m(pose, current_angle):
                         time.sleep(2)
