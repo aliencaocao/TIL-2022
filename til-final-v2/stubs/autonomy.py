@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO,
 # Define config variables in an easily accessible location
 # You may consider using a config file
 REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune, in meters
-ANGLE_THRESHOLD_DEG = 20.0  # TODO: Participant may tune.
+ANGLE_THRESHOLD_DEG = 90.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
 tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.1, 0.0), Kd=(0, 0))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
@@ -64,7 +64,7 @@ def main():
     cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    # nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
+    #nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
     # loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
     loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
     rep_service = ReportingService(host='localhost', port=5566)  # only avail on simulator
@@ -88,6 +88,7 @@ def main():
     path: List[RealLocation] = []
     lois: List[RealLocation] = []
     curr_wp: RealLocation = None
+    use_spin_direction_lock = False
     spin_direction_lock = False
     spin_sign = 0 #-1 or 1 when spin_direction_lock is active
 
@@ -170,15 +171,15 @@ def main():
                 if ang_diff > 180:
                     ang_diff -= 360
 
-                if spin_direction_lock:
+                if use_spin_direction_lock and spin_direction_lock:
                     if spin_sign == 1 and ang_diff < 0:
-                        #print("Spin direction lock, modifying ang_diff +360")
+                        print("Spin direction lock, modifying ang_diff +360")
                         ang_diff += 360
                     elif spin_sign == -1 and ang_diff >0:
-                        #print("Spin direction lock, modifying ang_diff -360")
+                        print("Spin direction lock, modifying ang_diff -360")
                         ang_diff -= 360
 
-                #logging.getLogger('Navigation').info('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
+                logging.getLogger('Navigation').info('ang_to_wp: {}, hdg: {}, ang_diff: {}'.format(ang_to_wp, pose[2], ang_diff))
                 # logging.getLogger('Navigation').info('Pose: {}'.format(pose))
 
                 # Consider waypoint reached if within a threshold distance
