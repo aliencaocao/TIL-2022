@@ -30,3 +30,4 @@ til-final-2022.1.1-lower/results
 /til-final
 *.whl
 til-final-v2/site-packages
+*.pyc

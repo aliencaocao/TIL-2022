@@ -36,7 +36,7 @@ class CVService:
             Detected targets.
         '''
         h, w, c = img.shape
-        img = img[int(h/4):int(h*3/4), int(w/4):int(w*3/4), :]
+        img = img[int(h*3/10):int(h*9/10), int(w*1/10):int(w*9/10), :]  # zoom 30% crop on top, 10% on bottom, 10% on left and right
         
         result = inference_detector(self.model, img)
         detections = []

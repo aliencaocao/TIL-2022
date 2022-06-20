@@ -1,5 +1,6 @@
 import os
 import sys
+
 os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', '') + ':' + os.path.join(os.getcwd(), 'site-packages')
 sys.path.insert(0, os.path.join(os.getcwd(), 'site-packages'))
 print(sys.path)
@@ -19,18 +20,18 @@ from planner import MyPlanner
 
 # Setup logging in a nice readable format
 logging.basicConfig(level=logging.INFO,
-                    format='[%(levelname)5s][%(asctime)s][%(name)s]: %(message)s',
+                    format='[%(levelname)s][%(asctime)s][%(name)s]: %(message)s',
                     datefmt='%H:%M:%S')
 
 # Define config variables in an easily accessible location
 # You may consider using a config file
 REACHED_THRESHOLD_M = 0.3  # TODO: Participant may tune, in meters
-ANGLE_THRESHOLD_DEG = 90.0  # TODO: Participant may tune.
+ANGLE_THRESHOLD_DEG = 25.0  # TODO: Participant may tune.
 ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
 tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.1, 0.0), Kd=(0, 0))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
-CV_CONFIG_DIR = 'universenet_custom_config.py'
+CV_CONFIG_DIR = 'vfnet.py'
 CV_MODEL_DIR = 'epoch_34.pth'
 prev_img_rpt_time = 0
 
@@ -64,9 +65,9 @@ def main():
     cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
-    #nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
-    # loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
-    loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    # nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
+    loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
+    # loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
     rep_service = ReportingService(host='localhost', port=5566)  # only avail on simulator
     robot = Robot()
     robot.initialize(conn_type="sta")
@@ -77,8 +78,6 @@ def main():
 
     # Initialize planner
     map_: SignedDistanceGrid = loc_service.get_map()
-    # cv2.imshow("ImageWindow", map_.grid)
-    # cv2.waitKey()
     map_ = map_.dilated(1.5 * ROBOT_RADIUS_M / map_.scale)
     planner = MyPlanner(map_, waypoint_sparsity=0.4, optimize_threshold=3, consider=4, biggrid_size=0.8)
 
@@ -90,7 +89,7 @@ def main():
     curr_wp: RealLocation = None
     use_spin_direction_lock = False
     spin_direction_lock = False
-    spin_sign = 0 #-1 or 1 when spin_direction_lock is active
+    spin_sign = 0  # -1 or 1 when spin_direction_lock is active
 
     # Initialize pose filter
     pose_filter = SimpleMovingAverage(n=10)
@@ -132,7 +131,6 @@ def main():
                 if explore_next is None:
                     break
                 lois.append(explore_next)
-                # break
 
             # Get new LOI
             lois.sort(key=lambda l: euclidean_distance(l, pose), reverse=True)
@@ -171,11 +169,11 @@ def main():
                 if ang_diff > 180:
                     ang_diff -= 360
 
-                if use_spin_direction_lock and spin_direction_lock:
+                if use_spin_direction_lock and spin_direction_lock:  # disabled
                     if spin_sign == 1 and ang_diff < 0:
                         print("Spin direction lock, modifying ang_diff +360")
                         ang_diff += 360
-                    elif spin_sign == -1 and ang_diff >0:
+                    elif spin_sign == -1 and ang_diff > 0:
                         print("Spin direction lock, modifying ang_diff -360")
                         ang_diff -= 360
 
@@ -218,35 +216,36 @@ def main():
                 starting_angle %= 360
                 first_turn_angle = starting_angle % 90
 
-                robot.chassis.drive_speed(x=0, z=first_turn_angle)
-                time.sleep(1)
-                robot.chassis.drive_speed(x=0, z=0)
-                # robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/2))  # for real robot
-                print("First_turn_angle",first_turn_angle)
+                # robot.chassis.drive_speed(x=0, z=first_turn_angle)
+                # time.sleep(1)
+                # robot.chassis.drive_speed(x=0, z=0)
+                robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/1.5))  # for real robot
+                print("First_turn_angle", first_turn_angle)
 
                 current_angle = (starting_angle - first_turn_angle) % 360
 
                 if planner.wall_within_1m(pose, current_angle):
-                    print("Doing angle",current_angle)
+                    print("Doing angle", current_angle)
+                    time.sleep(2)
                     do_cv()
                 else:
-                    print("Skipping angle",current_angle)
+                    print("Skipping angle", current_angle)
 
                 for spinning in range(3):
-                    robot.chassis.drive_speed(x=0, z=90)
-                    time.sleep(1)
-                    robot.chassis.drive_speed(x=0, z=0)
-                    # robot.chassis.move(z=90, z_speed=45)  # for real robot
+                    # robot.chassis.drive_speed(x=0, z=90)
+                    # time.sleep(1)
+                    # robot.chassis.drive_speed(x=0, z=0)
+                    robot.chassis.move(z=90, z_speed=45)  # for real robot
                     current_angle = (current_angle - 90) % 360
                     if planner.wall_within_1m(pose, current_angle):
-                        print("Doing angle",current_angle)
+                        print("Doing angle", current_angle)
                         time.sleep(2)
                         do_cv()
                     else:
-                        print("Skipping angle",current_angle)
+                        print("Skipping angle", current_angle)
 
                 print('Done spinning. Moving on.')
-                #Reset the pose_filter
+                # Reset the pose_filter
                 pose_filter = SimpleMovingAverage(n=10)
                 continue
 
