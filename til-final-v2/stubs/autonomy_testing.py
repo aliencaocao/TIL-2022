@@ -12,10 +12,10 @@ from typing import List
 
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
-# from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
-from robomaster.robot import Robot  # Use this for real robot
+from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
+# from robomaster.robot import Robot  # Use this for real robot
 
-from cv_service import CVService, MockCVService
+#from cv_service import CVService, MockCVService
 from nlp_service import NLPService, MockNLPService
 from planner import MyPlanner
 
@@ -54,7 +54,7 @@ def main():
             img = robot.camera.read_cv2_image(strategy='newest')
 
             # Process image and detect targets
-            targets = cv_service.targets_from_image(img)
+            targets = None #cv_service.targets_from_image(img)
 
             # Submit targets
             if targets:
@@ -63,12 +63,12 @@ def main():
                 logging.getLogger('Main').info('{} targets detected.'.format(len(targets)))
 
     # Initialize services
-    cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
+    # cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
     # cv_service = MockCVService(model_dir=CV_MODEL_DIR)
     nlp_service = NLPService(preprocessor_dir=NLP_PREPROCESSOR_DIR, model_dir=NLP_MODEL_DIR)
     # nlp_service = MockNLPService(model_dir=NLP_MODEL_DIR)
-    loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
-    # loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
+    # loc_service = LocalizationService(host='192.168.20.56', port=5521)  # for real robot
+    loc_service = LocalizationService(host='localhost', port=5566)  # for simulator
     rep_service = ReportingService(host='localhost', port=5566)  # only avail on simulator
     robot = Robot()
     robot.initialize(conn_type="sta")
@@ -226,10 +226,10 @@ def main():
                 starting_angle %= 360
                 first_turn_angle = starting_angle % 90
 
-                # robot.chassis.drive_speed(x=0, z=first_turn_angle)
-                # time.sleep(1)
-                # robot.chassis.drive_speed(x=0, z=0)
-                robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/1.5))  # for real robot
+                robot.chassis.drive_speed(x=0, z=first_turn_angle)
+                time.sleep(1)
+                robot.chassis.drive_speed(x=0, z=0)
+                # robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/1.5))  # for real robot
                 print("First_turn_angle", first_turn_angle)
 
                 current_angle = (starting_angle - first_turn_angle) % 360
@@ -242,10 +242,10 @@ def main():
                     print("Skipping angle", current_angle)
 
                 for spinning in range(3):
-                    # robot.chassis.drive_speed(x=0, z=90)
-                    # time.sleep(1)
-                    # robot.chassis.drive_speed(x=0, z=0)
-                    robot.chassis.move(z=90, z_speed=45)  # for real robot
+                    robot.chassis.drive_speed(x=0, z=90)
+                    time.sleep(1)
+                    robot.chassis.drive_speed(x=0, z=0)
+                    # robot.chassis.move(z=90, z_speed=45)  # for real robot
                     current_angle = (current_angle - 90) % 360
                     if planner.wall_within_1m(pose, current_angle):
                         print("Doing angle", current_angle)

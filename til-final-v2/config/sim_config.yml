@@ -31,22 +31,22 @@ log_level: 'debug'
 clues:
   - clue_id: 1
     trigger:
-      x: 1.0
-      y: 1.0
-      r: 0.7
-    location:
-      x: 4.0
+      x: 0.5
       y: 4.0
-    audio_file: './data/audio/SM4_F48_A0100.wav'
-  - clue_id: 2
-    trigger:
-      x: 3.0
-      y: 1.5
-      r: 0.8
+      r: 0.7
     location:
       x: 1.0
       y: 2.5
     audio_file: './data/audio/SM4_F48_A0100.wav'
+  - clue_id: 2
+    trigger:
+      x: 0.5
+      y: 4.0
+      r: 0.8
+    location:
+      x: 3.0
+      y: 4.5
+    audio_file: './data/audio/1aa7f157ce.wav'
 
 
 # targets
