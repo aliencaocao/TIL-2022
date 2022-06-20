@@ -1,4 +1,3 @@
-from errno import EEXIST
 import os
 import sys
 
@@ -33,7 +32,7 @@ tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.1, 0.0), Kd=(0, 0))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
 CV_CONFIG_DIR = 'vfnet.py'
-CV_MODEL_DIR = 'epoch_34.pth'
+CV_MODEL_DIR = 'epoch_13.pth'
 prev_img_rpt_time = 0
 
 
@@ -130,7 +129,7 @@ def main():
         if not curr_loi:
             if len(lois) == 0:
                 logging.getLogger('Main').info('No more locations of interest.')
-                if(len(maybe_lois)):
+                if len(maybe_lois):
                     logging.getLogger('Main').info('Getting first of {} maybe_lois.'.format(len(maybe_lois)))
                     maybe_lois.sort(key=lambda l: euclidean_distance(l, pose), reverse=True)
                     nearest_maybe = maybe_lois.pop()
