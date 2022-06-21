@@ -11,7 +11,7 @@ from typing import List
 
 from tilsdk import *  # import the SDK
 from tilsdk.utilities import PIDController, SimpleMovingAverage  # import optional useful things
-# from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
+from tilsdk.mock_robomaster.robot import Robot  # Use this for the simulator
 from robomaster.robot import Robot  # Use this for real robot
 
 from cv_service import CVService, MockCVService
@@ -124,7 +124,7 @@ def main():
             update_locations(maybe_lois, maybe_useful_lois)
             seen_clues.update([c.clue_id for c in clues])
 
-        do_cv()
+        # do_cv()
 
         if not curr_loi:
             if len(lois) == 0:
@@ -190,7 +190,7 @@ def main():
                 # logging.getLogger('Navigation').info('Pose: {}'.format(pose))
 
                 # Consider waypoint reached if within a threshold distance
-                if dist_to_wp < REACHED_THRESHOLD_M:
+                if dist_to_wp < (REACHED_THRESHOLD_M / 2 if len(path) <= 1 else REACHED_THRESHOLD_M):
                     logging.getLogger('Navigation').info('Reached wp: {}'.format(curr_wp))
                     tracker.reset()
                     curr_wp = None
@@ -223,35 +223,28 @@ def main():
 
                 starting_angle = pose[2]
                 starting_angle %= 360
-                first_turn_angle = starting_angle % 90
+                first_turn_angle = starting_angle % 45
 
-                # robot.chassis.drive_speed(x=0, z=first_turn_angle)
-                # time.sleep(1)
-                # robot.chassis.drive_speed(x=0, z=0)
-                robot.chassis.move(z=first_turn_angle, z_speed=max(10, first_turn_angle/1.5))  # for real robot
+                robot.chassis.drive_speed(x=0, z=first_turn_angle)
+                time.sleep(1)
+                robot.chassis.drive_speed(x=0, z=0)
                 print("First_turn_angle", first_turn_angle)
 
                 current_angle = (starting_angle - first_turn_angle) % 360
 
-                if planner.wall_within_1m(pose, current_angle):
+                print("Doing angle", current_angle)
+                time.sleep(2)
+                do_cv()
+
+                for spinning in range(7):
+                    robot.chassis.drive_speed(x=0, z=45)
+                    time.sleep(1)
+                    robot.chassis.drive_speed(x=0, z=0)
+                    current_angle = (current_angle - 45) % 360
+
                     print("Doing angle", current_angle)
                     time.sleep(2)
                     do_cv()
-                else:
-                    print("Skipping angle", current_angle)
-
-                for spinning in range(3):
-                    # robot.chassis.drive_speed(x=0, z=90)
-                    # time.sleep(1)
-                    # robot.chassis.drive_speed(x=0, z=0)
-                    robot.chassis.move(z=90, z_speed=45)  # for real robot
-                    current_angle = (current_angle - 90) % 360
-                    if planner.wall_within_1m(pose, current_angle):
-                        print("Doing angle", current_angle)
-                        time.sleep(2)
-                        do_cv()
-                    else:
-                        print("Skipping angle", current_angle)
 
                 print('Done spinning. Moving on.')
                 # Reset the pose_filter

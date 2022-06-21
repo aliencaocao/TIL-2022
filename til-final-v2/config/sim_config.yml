@@ -4,8 +4,8 @@ host: '0.0.0.0'
 port: 5566
 
 # map
-map_file: './data/maps/test_5cm.png'
-map_scale: 0.05
+map_file: './data/maps/map_complex_1cm.png'
+map_scale: 0.01
 
 # display
 robot_radius: 2 #For scale 0.05. 10 for scale 0.01

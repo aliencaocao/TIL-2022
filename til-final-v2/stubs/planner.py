@@ -73,8 +73,14 @@ class MyPlanner:
         # Possible to edit this transform if u want
         k = 500  # tune this for sensitive to stay away from wall. Lower means less sensitive -> allow closer to walls
         grid2 = grid.copy()
-        grid2[grid2 > 0] = 1 + k / (grid2[grid2 > 0])
-        grid2[grid2 <= 0] = np.inf
+        # grid2[grid2 > 0] = 1 + k / (grid2[grid2 > 0])
+        # grid2[grid2 <= 0] = np.inf
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+                if grid2[i][j] > 0:
+                    grid2[i][j] = max(1 + k / grid2[i][j], 1 + k / 14.5)
+                else:
+                    grid2[i][j] = np.inf
         return grid2.astype("float32")
 
     def big_grid_of(self, l: RealLocation):  # Returns the big grid array indices of a real location

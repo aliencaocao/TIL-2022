@@ -31,8 +31,8 @@ ROBOT_RADIUS_M = 0.17  # TODO: Participant may tune. 0.390 * 0.245 (L x W)
 tracker = PIDController(Kp=(0.35, 0.2), Ki=(0.1, 0.0), Kd=(0, 0))
 NLP_PREPROCESSOR_DIR = 'finals_audio_model'
 NLP_MODEL_DIR = 'model.onnx'
-CV_CONFIG_DIR = 'universenet_custom_config.py'
-CV_MODEL_DIR = 'epoch_34.pth'
+CV_CONFIG_DIR = 'vfnet.py'
+CV_MODEL_DIR = 'epoch_13.pth'
 prev_img_rpt_time = 0
 
 cv_service = CVService(config_file=CV_CONFIG_DIR, checkpoint_file=CV_MODEL_DIR)
