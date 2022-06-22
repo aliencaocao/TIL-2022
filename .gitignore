@@ -1,25 +1,6 @@
 # Audio
-Audio/data
-!Audio/data/citations.txt
-!Audio/data/split.ipynb
 Audio/models
 Audio/xlsr*
-Audio/answer*.csv
-Audio/answer*.xlsx
-Audio/transformers
-
-# CV
-CV/data/
-CV/scripts/generate-preds/pred-imgs
-CV/scripts/generate-preds/labels
-CV/scripts/val-split/images
-CV/scripts/val-split/labels
-CV/scripts/val-split/val_images
-CV/scripts/val-split/val_labels
-CV/to_wbf
-CV/yolov5
-CV/rcnn
-til-final-2022.1.1-lower/results
 
 # Other
 /.idea
@@ -27,7 +8,7 @@ til-final-2022.1.1-lower/results
 *.pt
 *.pth
 *.onnx
-/til-final
 *.whl
 til-final-v2/site-packages
 *.pyc
+*.pyd

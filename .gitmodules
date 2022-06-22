@@ -1,3 +1,6 @@
 [submodule "pyastar2d"]
 	path = pyastar2d
 	url = https://github.com/aliencaocao/pyastar2d
+[submodule "til2022-final"]
+	path = til2022-final
+	url = https://github.com/DinoHub/til2022-final
