@@ -40,9 +40,9 @@ For more details, see the scores section below.
 
 * [Audio](Audio): Code for NLP task
 * [CV](CV): Code for CV task
-* [pyastar2d](pyastar2d): Our modified fork of PyAstar2D implementation
+* [pyastar2d](https://github.com/aliencaocao/pyastar2d): Our modified fork of PyAstar2D implementation
 * [til-final-v2](til-final-v2): Code for finals robot driving
-* [til2022-final](til2022-final): DSTA provided simulator and SDK library for controlling the robot for finals
+* [til2022-final](https://github.com/DinoHub/til2022-final): DSTA provided simulator and SDK library for controlling the robot for finals
 
 ## Technical writeup
 
@@ -54,7 +54,7 @@ We fine-tuned it further on a combination of multiple datasets. For details, ple
 For finals, we modified the 5-class classifier model into a binary one, since the finals only requre classification of audio between angry/sad and happy/neutral. Our binary classification model reached 99.1% accuracy on a 20% split validation set. Our model was also converted to ONNX format with graph optimization and FP16 precision.
 
 ### Computer Vision - Human standing/fallen detection
-We used Cascade-RCNN and YOLOv5x pretrained on the [VFP290K](https://github.com/DASH-Lab/VFP290K) dataset for qualifiers, and did weighted box fusion to ensemble them.
+For qualifiers, we used Cascade-RCNN and YOLOv5x pretrained on the [VFP290K](https://github.com/DASH-Lab/VFP290K) dataset, and did weighted box fusion to ensemble them.
 
 For finals, we used the [VarifocalNet X-101-64x4d](https://github.com/open-mmlab/mmdetection/blob/master/configs/vfnet/README.md). Our deployed model on the robot is optimized with FP16 precision and convolutional and batch-normalization fusion.
 
