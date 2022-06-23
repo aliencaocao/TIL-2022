@@ -17,3 +17,5 @@ http://m3c.web.auth.gr/research/aesdd-speech-emotion-recognition/
 Cross Lingual Speech Emotion Recognition: Urdu vs. Western Languages (https://github.com/siddiquelatif/URDU-Dataset)
 
 Giovanni Costantini, Iacopo Iaderola, Andrea Paoloni, and Massimiliano Todisco. 2014. EMOVO Corpus: an Italian Emotional Speech Database. In Proceedings of the Ninth International Conference on Language Resources and Evaluation (LREC'14), pages 3501–3504, Reykjavik, Iceland. European Language Resources Association (ELRA).
+
+DSTA: custom Singaporean accent dataset (competition official training data)

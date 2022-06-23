@@ -78,7 +78,7 @@ class MyPlanner:
         for i in range(grid.shape[0]):
             for j in range(grid.shape[1]):
                 if grid2[i][j] > 0:
-                    grid2[i][j] = max(1 + k / grid2[i][j], 1 + k / 14.5)
+                    grid2[i][j] = max(1 + k / grid2[i][j], 1 + k / 14.5)  # set area further than 14.5cm away from the wall to be of equal potential
                 else:
                     grid2[i][j] = np.inf
         return grid2.astype("float32")
